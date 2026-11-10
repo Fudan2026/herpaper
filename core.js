@@ -1,8 +1,8 @@
-/* PaperDesk core: 状态 / 数据源 / 解析 / 引文格式化 / 导出 / 图表 */
+/* HerPaper core: 状态 / 数据源 / 解析 / 引文格式化 / 导出 / 图表 */
 (function () {
 'use strict';
 const PD = window.PD = {};
-const LS_KEY = 'paperdesk.state.v1';
+const LS_KEY = 'herpaper.state.v1';
 const MAIL = 'mailto=research@example.com';
 const OA = 'https://api.openalex.org';
 // 静态托管（GitHub Pages 等）没有本地后端：跳过 /api 探测与代理回落，直接连开放学术 API
@@ -607,7 +607,7 @@ PD.exportCSV = function (items) {
 
 PD.exportHTML = function (items, title, note) {
   const rows = items.map((it, i) => '<tr><td>' + (i + 1) + '</td><td><b>' + PD.esc(it.title) + '</b><br><span>' + PD.esc((it.authors || []).join(', ')) + '</span></td><td>' + PD.esc(it.journal) + '</td><td>' + PD.esc(it.year) + '</td><td>' + PD.esc(it.citedBy || 0) + '</td><td>' + (it.doi ? '<a href="https://doi.org/' + PD.esc(it.doi) + '">' + PD.esc(it.doi) + '</a>' : '') + '</td></tr>').join('');
-  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>' + PD.esc(title) + '</title><style>body{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#172033}h1{font-size:24px}p.note{color:#52607a;background:#f5f7fb;padding:12px 16px;border-radius:10px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f5f7fb;text-align:left;padding:9px}td{border-top:1px solid #e6eaf2;padding:9px;vertical-align:top}td span{color:#8a97ad;font-size:11px}a{color:#4f46e5}footer{margin-top:28px;color:#8a97ad;font-size:11px}</style></head><body><h1>' + PD.esc(title) + '</h1>' + (note ? '<p class="note">' + PD.esc(note) + '</p>' : '') + '<p>共 ' + items.length + ' 篇文献 · 由 PaperDesk 生成</p><table><thead><tr><th>#</th><th>题名 / 作者</th><th>期刊</th><th>年份</th><th>被引</th><th>DOI</th></tr></thead><tbody>' + rows + '</tbody></table><footer>只读快照 · 生成时间 ' + new Date().toLocaleString('zh-CN') + '</footer></body></html>';
+  return '<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8"><title>' + PD.esc(title) + '</title><style>body{font-family:-apple-system,"PingFang SC",sans-serif;max-width:1000px;margin:40px auto;padding:0 20px;color:#172033}h1{font-size:24px}p.note{color:#52607a;background:#f5f7fb;padding:12px 16px;border-radius:10px}table{width:100%;border-collapse:collapse;font-size:13px}th{background:#f5f7fb;text-align:left;padding:9px}td{border-top:1px solid #e6eaf2;padding:9px;vertical-align:top}td span{color:#8a97ad;font-size:11px}a{color:#4f46e5}footer{margin-top:28px;color:#8a97ad;font-size:11px}</style></head><body><h1>' + PD.esc(title) + '</h1>' + (note ? '<p class="note">' + PD.esc(note) + '</p>' : '') + '<p>共 ' + items.length + ' 篇文献 · 由 HerPaper 生成</p><table><thead><tr><th>#</th><th>题名 / 作者</th><th>期刊</th><th>年份</th><th>被引</th><th>DOI</th></tr></thead><tbody>' + rows + '</tbody></table><footer>只读快照 · 生成时间 ' + new Date().toLocaleString('zh-CN') + '</footer></body></html>';
 };
 
 /* ---------- 图表 ---------- */

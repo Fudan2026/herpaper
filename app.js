@@ -1,4 +1,4 @@
-/* PaperDesk UI：九个视图的渲染与交互 */
+/* HerPaper UI：九个视图的渲染与交互 */
 (async function () {
 'use strict';
 const $ = id => document.getElementById(id);
@@ -145,6 +145,7 @@ async function handleFiles(files) {
     const text = await f.text();
     const r = PD.parseAny(text, f.name);
     if (r.state) restored = r.state;
+    if (PD.isCSLArray(r.items)) r.items = r.items.map(PD.fromCSL).filter(Boolean);
     if (r.items && r.items.length) all = all.concat(r.items);
     if (r.dois && r.dois.length) doiList = doiList.concat(r.dois);
     if (r.error) PD.toast(f.name + '：' + r.error);
@@ -192,16 +193,17 @@ function currentItems() { return lib(); }
 function doExport(kind) {
   const L = lib(), ts = new Date().toISOString().slice(0, 10);
   if (!L.length && kind !== 'json') { PD.toast('库里还没有文献'); return; }
-  if (kind === 'json') { PD.download('paperdesk-backup-' + ts + '.json', JSON.stringify(PD.state, null, 1), 'application/json'); PD.toast('完整备份已导出（含分组与文稿）'); return; }
-  if (kind === 'ris') PD.download('paperdesk-' + ts + '.ris', PD.exportRIS(L), 'application/x-research-info-systems');
-  if (kind === 'bib') PD.download('paperdesk-' + ts + '.bib', PD.exportBib(L), 'application/x-bibtex');
-  if (kind === 'csv') PD.download('paperdesk-' + ts + '.csv', PD.exportCSV(L), 'text/csv');
-  if (kind === 'html') PD.download('paperdesk-snapshot-' + ts + '.html', PD.exportHTML(L, 'PaperDesk 文献库', '共 ' + L.length + ' 篇 · 自包含只读快照'), 'text/html');
+  if (kind === 'csljson') { PD.download('herpaper-csl-' + ts + '.json', PD.exportCSL(L), 'application/json'); PD.toast('已导出 CSL-JSON（Zotero / Pandoc / citeproc 通用）'); return; }
+  if (kind === 'json') { PD.download('herpaper-backup-' + ts + '.json', JSON.stringify(PD.state, null, 1), 'application/json'); PD.toast('完整备份已导出（含分组与文稿）'); return; }
+  if (kind === 'ris') PD.download('herpaper-' + ts + '.ris', PD.exportRIS(L), 'application/x-research-info-systems');
+  if (kind === 'bib') PD.download('herpaper-' + ts + '.bib', PD.exportBib(L), 'application/x-bibtex');
+  if (kind === 'csv') PD.download('herpaper-' + ts + '.csv', PD.exportCSV(L), 'text/csv');
+  if (kind === 'html') PD.download('herpaper-snapshot-' + ts + '.html', PD.exportHTML(L, 'HerPaper 文献库', '共 ' + L.length + ' 篇 · 自包含只读快照'), 'text/html');
   if (kind === 'group-ris' || kind === 'group-bib') {
     const g = $('shareGroup').value;
     const items = g === '__all' ? L : L.filter(x => (x.groups || []).includes(g));
     if (!items.length) { PD.toast('该分组暂无文献'); return; }
-    PD.download('paperdesk-group-' + ts + (kind === 'group-ris' ? '.ris' : '.bib'), kind === 'group-ris' ? PD.exportRIS(items) : PD.exportBib(items), 'text/plain');
+    PD.download('herpaper-group-' + ts + (kind === 'group-ris' ? '.ris' : '.bib'), kind === 'group-ris' ? PD.exportRIS(items) : PD.exportBib(items), 'text/plain');
   }
   PD.toast('已导出');
 }
@@ -213,7 +215,7 @@ function renderWos() {
     '<div class="li"><div class="li-main"><div class="li-title">' + esc(it.title) + '</div>' +
     '<div class="muted">' + esc(itemMeta(it)) + (it.ut ? ' · <span class="tag brand">WoS 入藏号 ' + esc(it.ut) + '</span>' : ' · <span class="tag amber">以 DOI/题名跳转</span>') + '</div>' +
     linksRow(it) + '</div>' +
-    '<button class="btn small" data-act="related" data-id="' + esc(it.id) + '" ' + (it.related && it.related.length ? '' : 'disabled title="暂无相关记录，先在引文报告刷新数据"') + '>相关记录</button></div>'
+    '<button class="btn small" data-act="related" data-id="' + esc(it.id) + '" ' + (it.related && it.related.length ? '' : 'disabled title="暂无相关记录，先在引文报告刷新数据"') + '>相关记录</button> <button class="btn small" data-act="chain" data-id="' + esc(it.id) + '">引文链条</button></div>'
   ).join('') : '<div class="empty">库是空的，先在「检索建库」收几篇文献。</div>';
 }
 async function showRelated(id) {
@@ -371,7 +373,7 @@ async function createShare() {
       if (d.ok) { PD.state.shares = PD.state.shares || []; PD.state.shares.unshift({ id: d.id, name, count: items.length, at: Date.now() }); PD.save(); renderShareList(); PD.toast('共享链接已生成，可转发给任意人数'); }
     } catch (e) { PD.toast('生成失败：' + e.message); }
   } else {
-    PD.download('paperdesk-share.html', PD.exportHTML(items, name, note), 'text/html');
+    PD.download('herpaper-share.html', PD.exportHTML(items, name, note), 'text/html');
     PD.state.shares = PD.state.shares || []; PD.state.shares.unshift({ id: 'local', name, count: items.length, at: Date.now() });
     PD.save(); renderShareList(); PD.toast('已下载自包含 HTML 快照，转发该文件即可');
   }
@@ -666,6 +668,108 @@ $('matchFromLib').onchange = e => {
   PD.toast('已填入该文献的题名与摘要');
 };
 
+/* ---------- Zotero 增量同步中心 ---------- */
+let chainOut = [], chainIn = [];
+async function refreshZoteroStatus() {
+  const box = $('zoteroStatus');
+  try {
+    const s = await PD.zotero.status();
+    const local = s.local || {};
+    const cards = [
+      ['Local API 23119', s.available ? '已连接' : (local.running ? '未启用' : '未运行'),
+        s.available ? ('Server-ID ' + (s.serverId || '—')) : (s.hint || local.hint || '启动 Zotero 桌面端')],
+      ['Web API v3', s.webConfigured ? '已配置' : '未配置', s.webConfigured ? ('userID ' + s.userId) : '需要 Zotero API Key'],
+      ['增量游标', Object.keys(s.partitions || {}).length + ' 个分区',
+        Object.entries(s.partitions || {}).map(([k, v]) => k.split('|')[0] + ':' + v.cursor).join(' · ') || '尚无同步记录']
+    ];
+    box.innerHTML = cards.map(x => '<div class="stat"><div class="k">' + esc(x[0]) + '</div><div class="v" style="font-size:17px">' + esc(x[1]) + '</div><div class="s">' + esc(String(x[2]).slice(0, 60)) + '</div></div>').join('');
+    $('zotLog').textContent = s.available
+      ? 'Local API 可读免鉴权、写需运行时授权。增量同步按不透明版本游标执行：?since + format=versions 取差异 → 每批 ≤50 按 key 拉取 → /deleted 取墓碑 → 并发 LMV 变化自动重启。CSL-JSON 为内部交换格式。'
+      : (s.hint || 'Zotero 桌面端未运行或 Local API 未启用：Zotero → Settings → Advanced → 勾选 “Allow other applications on this computer to communicate with Zotero”。也可切到 Web API v3 并填入 API Key。');
+    $('zotUserId').value = s.userId || '0';
+  } catch (e) {
+    box.innerHTML = '<div class="stat"><div class="k">桥接状态</div><div class="v" style="font-size:17px">不可用</div><div class="s">' + esc(e.message) + '</div></div>';
+    $('zotLog').textContent = '本机服务未启动：运行 herpaper/start.command 后从 http://127.0.0.1:8765 打开；GitHub Pages 静态页无法访问本机 23119 端口。';
+  }
+}
+$('btnZotStatus').onclick = refreshZoteroStatus;
+$('btnZotConfig').onclick = async () => {
+  try {
+    const r = await PD.zotero.config({ userId: $('zotUserId').value.trim() || '0', apiKey: $('zotApiKey').value.trim() });
+    $('zotApiKey').value = '';
+    PD.toast(r.webConfigured ? 'Web API v3 配置已保存到本机 data/config.json' : '配置已保存');
+    refreshZoteroStatus();
+  } catch (e) { PD.toast('保存失败：' + e.message); }
+};
+$('btnZotAuthorize').onclick = async () => {
+  PD.toast('请在 Zotero 弹出的对话框点 Allow…');
+  try { const r = await PD.zotero.authorize(); PD.toast(r.ok ? '本地写入授权成功' : '授权未完成'); }
+  catch (e) { PD.toast('授权失败：' + e.message); }
+  refreshZoteroStatus();
+};
+$('btnZotPull').onclick = async () => {
+  const b = $('btnZotPull'); b.disabled = true; b.textContent = '同步中…';
+  try {
+    const r = await PD.zotero.pull($('zotMode').value);
+    if (r.error) { $('zotLog').textContent = '同步未完成：' + r.error + (r.hint ? ' — ' + r.hint : ''); PD.toast(r.error); }
+    else {
+      $('zotLog').textContent = '增量同步完成 · 模式 ' + r.mode + ' · 游标 ' + r.cursor +
+        ' · 版本差异 ' + (r.pull.versions_returned || 0) + ' 条 / 实际下载 ' + (r.pull.downloaded || 0) +
+        ' 条 / 删除 ' + (r.pull.deleted || 0) + ' 条 · 合并进库 新增 ' + (r.merge.added || 0) + '，更新 ' + (r.merge.updated || 0);
+      PD.state = await (await fetch('/api/state', { cache: 'no-store' })).json();
+      renderAll(); PD.toast('同步完成，库内共 ' + r.merge.total + ' 篇');
+    }
+  } catch (e) { $('zotLog').textContent = '同步失败：' + e.message; PD.toast(e.message); }
+  b.disabled = false; b.textContent = '增量拉取';
+  refreshZoteroStatus();
+};
+$('btnZotPush').onclick = async () => {
+  if (!lib().length) { PD.toast('库是空的'); return; }
+  try {
+    const r = await PD.zotero.push($('zotMode').value, lib().filter(x => x.synced === false).map(PD.toCSL));
+    if (r.error) { $('zotLog').textContent = '推送未完成：' + r.error; PD.toast(r.error); return; }
+    $('zotLog').textContent = r.conflict
+      ? '远端在同步期间发生变化（412 Precondition Failed），请重新执行增量拉取后重试。'
+      : '推送完成 · 成功 ' + r.successfulCount + ' 条 · 新游标 ' + r.cursor;
+    PD.toast(r.conflict ? '检测到并发冲突，先拉取再推' : '推送完成');
+  } catch (e) { PD.toast('推送失败：' + e.message); }
+};
+$('btnZotRender').onclick = async () => {
+  try {
+    const r = await PD.zotero.render($('zotStyle').value, 'bib');
+    const box = $('zotRenderBox'); box.hidden = false;
+    box.innerHTML = '<b>Zotero citeproc 渲染（' + esc(r.style) + '）</b><pre style="white-space:pre-wrap;font-size:11.5px;margin:8px 0 0">' +
+      esc(typeof r.result === 'string' ? r.result.slice(0, 4000) : JSON.stringify(r.result, null, 2).slice(0, 4000)) + '</pre>';
+  } catch (e) { PD.toast('渲染失败：' + e.message); }
+};
+
+/* ---------- 引文链条 ---------- */
+async function showChain(id) {
+  const it = find(id); if (!it) return;
+  $('chainCard').hidden = false;
+  $('chainTitle').textContent = '引文链条 · ' + (it.title || '').slice(0, 46);
+  $('chainBox').innerHTML = '<div class="empty">正在向 OpenAlex 拉取双向引文链条…</div>';
+  try {
+    const c = await PD.citationChain(it, { out: 25, incoming: 10 });
+    chainOut = c.outgoing; chainIn = c.incoming;
+    $('chainStats').innerHTML = [
+      ['被引总数', c.seed.citedBy, '施引文献 ' + c.incomingTotal + ' 篇'],
+      ['参考文献', c.seed.totalReferences, '已解析 ' + c.outgoing.length + ' 篇'],
+      ['FWCI', c.seed.fwci == null ? '—' : Number(c.seed.fwci).toFixed(2), '1.0 = 世界均值']
+    ].map(x => '<div class="stat"><div class="k">' + x[0] + '</div><div class="v">' + x[1] + '</div><div class="s">' + x[2] + '</div></div>').join('');
+    const rows = (arr, label, cls) => arr.map(x => '<div class="li"><div class="li-main"><div class="li-title">' + esc(x.title) + '</div>' +
+      '<div class="muted">' + label + ' · ' + esc(x.journal || '—') + ' · ' + esc(x.year || '—') + ' · 被引 ' + x.citedBy + '</div></div>' +
+      '<button class="btn small" data-act="chain-add" data-id="' + esc(x.id) + '" data-kind="' + cls + '">加入库</button></div>').join('');
+    $('chainBox').innerHTML =
+      '<div class="sub-hd">出链 · 该文引用的文献（' + c.outgoing.length + '）</div>' + (rows(c.outgoing, '参考', 'out') || '<div class="empty">无</div>') +
+      '<div class="sub-hd" style="margin-top:14px">入链 · 引用该文的文献（' + c.incoming.length + ' / 共 ' + c.incomingTotal + '）</div>' + (rows(c.incoming, '施引', 'in') || '<div class="empty">无</div>') +
+      (c.seed.isRetracted ? '<div class="howto">注意：该文献在 OpenAlex 标记为已撤稿。</div>' : '');
+    PD.toast('引文链条已展开');
+  } catch (e) { $('chainBox').innerHTML = '<div class="empty">拉取失败：' + esc(e.message) + '</div>'; }
+}
+$('btnAddChainOut').onclick = () => { if (chainOut.length) { PD.addItems(chainOut); renderAll(); } };
+$('btnAddChainIn').onclick = () => { if (chainIn.length) { PD.addItems(chainIn); renderAll(); } };
+
 /* 动态元素统一委托 */
 document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]'); if (!b) return;
@@ -675,6 +779,11 @@ document.addEventListener('click', e => {
   else if (act === 'add-one') { const it = PD.searchResults.find(x => x.id === id); if (it) { PD.addItems([it]); renderAll(); } }
   else if (act === 'add-related') { const it = PD.relatedItems.find(x => x.id === id); if (it) { PD.addItems([it]); renderAll(); } }
   else if (act === 'related') showRelated(id);
+  else if (act === 'chain') showChain(id);
+  else if (act === 'chain-add') {
+    const arr = b.dataset.kind === 'out' ? chainOut : chainIn;
+    const x = arr.find(y => y.id === id); if (x) { PD.addItems([x]); renderAll(); }
+  }
   else if (act === 'edit') editItem(id);
   else if (act === 'insert') insertCite(id);
   else if (act === 'sel') { b.checked ? sel.add(id) : sel.delete(id); }
@@ -701,6 +810,7 @@ document.querySelectorAll('[data-tplexport]').forEach(b => b.onclick = () => {
 
 renderChips(); initJournals(); genTemplate('');
 renderAll(); go('v1');
+refreshZoteroStatus();
 
 // 可分享的预填检索链接：https://<站点>/?q=CRISPR
 try {

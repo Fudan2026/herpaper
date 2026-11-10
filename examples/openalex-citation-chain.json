@@ -1,0 +1,92 @@
+{
+  "query": "CRISPR gene editing",
+  "fetched_at": "2026-11-10T19:07:13",
+  "seed": {
+    "id": "W2794543671",
+    "title": "CRISPR Gene Editing in the Kidney",
+    "doi": "https://doi.org/10.1053/j.ajkd.2018.02.347",
+    "year": 2018,
+    "cited_by_count": 69,
+    "fwci": 0.5443
+  },
+  "outgoing_references": [
+    {
+      "id": "W1973260880",
+      "title": "Genome-Scale CRISPR-Cas9 Knockout Screening in Human Cells",
+      "year": 2013,
+      "cited_by_count": 5242
+    },
+    {
+      "id": "W1802574002",
+      "title": "Kidney organoids from human iPS cells contain multiple lineages and model human nephrogenesis",
+      "year": 2015,
+      "cited_by_count": 1657
+    },
+    {
+      "id": "W1982882278",
+      "title": "A functionally characterized test set of human induced pluripotent stem cells",
+      "year": 2011,
+      "cited_by_count": 494
+    },
+    {
+      "id": "W1974343902",
+      "title": "Low Incidence of Off-Target Mutations in Individual CRISPR-Cas9 and TALEN Targeted Human Stem Cell Clones Detected by Whole-Genome Sequencing",
+      "year": 2014,
+      "cited_by_count": 487
+    },
+    {
+      "id": "W1969418855",
+      "title": "Design of polydactyl zinc-finger proteins for unique addressing within complex genomes",
+      "year": 1997,
+      "cited_by_count": 332
+    },
+    {
+      "id": "W1954897628",
+      "title": "Pig kidney graft survival in a baboon for 136 days: longest life‐supporting organ graft survival to date",
+      "year": 2015,
+      "cited_by_count": 214
+    },
+    {
+      "id": "W1623951127",
+      "title": "Creating Class I MHC–Null Pigs Using Guide RNA and the Cas9 Endonuclease",
+      "year": 2014,
+      "cited_by_count": 161
+    },
+    {
+      "id": "W1963885877",
+      "title": "UK Renal Registry 15th Annual Report: Chapter 1 UK RRT Incidence in 2011: National and Centre-Speciﬁc Analyses",
+      "year": 2013,
+      "cited_by_count": 52
+    }
+  ],
+  "incoming_citations_total": 66,
+  "incoming_citations_sample": [
+    {
+      "id": "W2971631529",
+      "title": "Autosomal dominant tubulointerstitial kidney disease",
+      "year": 2019
+    },
+    {
+      "id": "W4210905920",
+      "title": "Current approaches in CRISPR-Cas9 mediated gene editing for biomedical and therapeutic applications",
+      "year": 2022
+    },
+    {
+      "id": "W4295009416",
+      "title": "Deep learning predicts the differentiation of kidney organoids derived from human induced pluripotent stem cells",
+      "year": 2022
+    }
+  ],
+  "related_work_ids": [
+    "W2044186696",
+    "W4412790782",
+    "W2806483758",
+    "W7219468320",
+    "W4401660129",
+    "W2605577322",
+    "W4411475195",
+    "W2469359910",
+    "W4394930574",
+    "W2810575835"
+  ]
+}

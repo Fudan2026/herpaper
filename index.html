@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PaperDesk · 文献工作台</title>
+<title>HerPaper</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-mark">PD</div>
-      <div><div class="brand-name">PaperDesk</div><div class="brand-sub">文献工作台 · 九项科研流</div></div>
+      <div><div class="brand-name">HerPaper</div><div class="brand-sub">OpenAlex · Zotero · Cite</div></div>
     </div>
     <nav class="nav" id="nav">
       <button class="nav-item active" data-view="v1"><span class="num">01</span><span class="nav-txt">检索建库<i>Web of Science / 开放库</i></span></button>
@@ -89,6 +89,27 @@
       <!-- 02 同步 -->
       <section class="view" id="v2">
         <div class="hero slim"><div class="hero-tag">SYNC</div><h1>跨平台同步</h1><p>本地自动保存是默认；通过本服务访问时改为服务端持久化，同一网络内其他设备打开同一地址即可读到同一个库。</p></div>
+        <div class="card" id="zoteroCard">
+          <div class="card-hd"><h2>Zotero 增量同步</h2><span class="muted">Web API v3 · Local API 23119 · CSL-JSON 内部规范</span></div>
+          <div class="grid3" id="zoteroStatus"></div>
+          <div class="filter-row" style="margin-top:12px">
+            <select id="zotMode" class="inp"><option value="local">Local API · 本机 23119</option><option value="web">Web API v3 · zotero.org</option></select>
+            <input id="zotUserId" class="inp" style="width:130px" placeholder="Zotero userID">
+            <input id="zotApiKey" class="inp" type="password" style="width:200px" placeholder="Zotero API Key（仅存本机）">
+            <button class="btn" id="btnZotConfig">保存配置</button>
+            <button class="btn primary" id="btnZotPull">增量拉取</button>
+            <button class="btn" id="btnZotPush">推送改动</button>
+            <button class="btn ghost" id="btnZotAuthorize">授权写入</button>
+          </div>
+          <div class="filter-row sub">
+            <select id="zotStyle" class="inp"><option value="apa">apa</option><option value="nature">nature</option><option value="vancouver">vancouver</option><option value="ieee">ieee</option><option value="chicago-note-bibliography">chicago</option><option value="china-national-standard-gb-t-7714-2015-numeric">GB/T 7714</option></select>
+            <button class="btn small" id="btnZotRender">用 Zotero citeproc 渲染</button>
+            <button class="btn small" data-export="csljson">导出 CSL-JSON</button>
+            <button class="btn small" id="btnZotStatus">刷新状态</button>
+          </div>
+          <div id="zotLog" class="howto">正在检测本机 Zotero Local API…</div>
+          <div id="zotRenderBox" class="howto" hidden></div>
+        </div>
         <div class="grid3" id="syncStats"></div>
         <div class="card">
           <div class="card-hd"><h2>整库导出 / 恢复</h2><span class="muted">所有格式均可再导入，或与 Zotero / EndNote 互通</span></div>
@@ -98,10 +119,11 @@
             <button class="btn" data-export="bib">BibTeX</button>
             <button class="btn" data-export="csv">CSV 表格</button>
             <button class="btn" data-export="html">自包含 HTML 快照</button>
+            <button class="btn" data-export="csljson">CSL-JSON</button>
             <button class="btn ghost" id="btnImportState">恢复 .json 备份</button>
             <input type="file" id="stateFile" accept=".json" hidden>
           </div>
-          <div class="howto">把导出的 <b>.json</b> 放进 iCloud Drive / OneDrive（本机已装），在另一台设备打开本工作台后「恢复备份」即可。若通过 <code>http://127.0.0.1:8765</code> 访问，库自动写入 <code>paperdesk/data/state.json</code>，同一地址即同一份数据。</div>
+          <div class="howto">把导出的 <b>.json</b> 放进 iCloud Drive / OneDrive（本机已装），在另一台设备打开本工作台后「恢复备份」即可。若通过 <code>http://127.0.0.1:8765</code> 访问，库自动写入 <code>herpaper/data/state.json</code>，同一地址即同一份数据。</div>
         </div>
         <div class="card">
           <div class="card-hd"><h2>与 Zotero 互通</h2><span class="muted">本机已安装 Zotero 10.0.8</span></div>
@@ -119,6 +141,11 @@
         <div class="card" id="relatedCard" hidden>
           <div class="card-hd"><h2 id="relatedTitle">相关记录</h2><button class="btn ghost small" id="btnAddRelated">全部加入库</button></div>
           <div id="relatedBox" class="list"></div>
+        </div>
+<div class="card" id="chainCard" hidden>
+          <div class="card-hd"><h2 id="chainTitle">引文链条</h2><div class="btn-row"><button class="btn ghost small" id="btnAddChainOut">加入全部参考文献</button><button class="btn ghost small" id="btnAddChainIn">加入全部施引文献</button></div></div>
+          <div class="grid4" id="chainStats"></div>
+          <div id="chainBox" class="list" style="margin-top:12px"></div>
         </div>
       </section>
 
@@ -265,6 +292,7 @@
 <div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-hd"><h3 id="modalTitle">编辑</h3><button class="btn ghost small" id="modalClose">关闭</button></div><div id="modalBody"></div></div></div>
 
 <script src="core.js"></script>
+<script src="integrations.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
