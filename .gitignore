@@ -1,0 +1,11 @@
+# 本地文献库与共享快照：仅存本机，不进公开仓库
+data/
+
+# Python / 系统噪声
+__pycache__/
+*.pyc
+.DS_Store
+
+# 本地临时文件
+*.tmp
+*.log

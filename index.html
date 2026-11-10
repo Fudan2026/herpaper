@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PaperDesk · 文献工作台</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">PD</div>
+      <div><div class="brand-name">PaperDesk</div><div class="brand-sub">文献工作台 · 九项科研流</div></div>
+    </div>
+    <nav class="nav" id="nav">
+      <button class="nav-item active" data-view="v1"><span class="num">01</span><span class="nav-txt">检索建库<i>Web of Science / 开放库</i></span></button>
+      <button class="nav-item" data-view="v2"><span class="num">02</span><span class="nav-txt">跨平台同步<i>本地 · 云盘 · 多端</i></span></button>
+      <button class="nav-item" data-view="v3"><span class="num">03</span><span class="nav-txt">全记录与相关文献<i>WoS 深链 / 相关记录</i></span></button>
+      <button class="nav-item" data-view="v4"><span class="num">04</span><span class="nav-txt">引文报告<i>被引 · h 指数 · 趋势</i></span></button>
+      <button class="nav-item" data-view="v5"><span class="num">05</span><span class="nav-txt">管理与分析<i>分组 · 去重 · 图表</i></span></button>
+      <button class="nav-item" data-view="v6"><span class="num">06</span><span class="nav-txt">共享协同<i>只读快照 · 分组包</i></span></button>
+      <button class="nav-item" data-view="v7"><span class="num">07</span><span class="nav-txt">边写边引<i>一键切换引文格式</i></span></button>
+      <button class="nav-item" data-view="v8"><span class="num">08</span><span class="nav-txt">投稿模板<i>期刊稿件骨架</i></span></button>
+      <button class="nav-item" data-view="v9"><span class="num">09</span><span class="nav-txt">期刊匹配<i>文稿 → 目标期刊</i></span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="status-line"><span class="dot" id="statusDot"></span><span id="statusText">初始化中…</span></div>
+      <div class="side-hint">数据仅存本机 · 无需账号</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <div class="crumb"><span id="crumbNum">01</span><span id="crumbTitle">检索建库</span></div>
+      <div class="top-actions">
+        <span class="badge" id="modeBadge">检测存储中</span>
+        <span class="badge soft"><b id="libCount">0</b> 篇文献</span>
+        <button class="btn small" id="btnQuickSave">立即保存</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- 01 检索建库 -->
+      <section class="view active" id="v1">
+        <div class="hero">
+          <div class="hero-tag">START HERE</div>
+          <h1>把文献收进来</h1>
+          <p>联网检索 OpenAlex / Europe PMC，或把 Web of Science、EndNote、Zotero 导出的文件直接拖进来。入库后其余八项自动全部可用。</p>
+        </div>
+        <div class="card">
+          <div class="card-hd"><h2>联网检索</h2><span class="muted">开放学术索引 · 实时元数据与被引数</span></div>
+          <div class="search-row">
+            <input id="q" class="inp grow" placeholder="输入题名、主题、作者或 DOI，例如：CRISPR gene editing">
+            <select id="source" class="inp"><option value="openalex">OpenAlex</option><option value="epmc">Europe PMC</option><option value="doi">DOI 精确</option></select>
+            <select id="typeFilter" class="inp"><option value="">全部类型</option><option value="article">期刊论文</option><option value="review">综述</option><option value="preprint">预印本</option><option value="book-chapter">书章节</option></select>
+          </div>
+          <div class="search-row sub">
+            <label class="mini">年份 <input id="yearFrom" class="inp tiny" type="number" placeholder="2000"></label>
+            <label class="mini">至 <input id="yearTo" class="inp tiny" type="number" placeholder="2026"></label>
+            <label class="chk"><input type="checkbox" id="oaOnly"> 仅开放获取</label>
+            <button class="btn primary" id="btnSearch">检索</button>
+            <span class="chips" id="chips"></span>
+          </div>
+          <div id="searchResults" class="results"><div class="empty">输入关键词开始检索，或从下方导入 WoS 导出文件。</div></div>
+          <div class="pager"><button class="btn ghost" id="btnPrev">上一页</button><span id="pageInfo" class="muted">第 1 页</span><button class="btn ghost" id="btnNext">下一页</button><button class="btn ghost" id="btnAddAll">全部加入库</button></div>
+        </div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-hd"><h2>导入 WoS / EndNote / Zotero</h2><span class="muted">WoS 导出文件一键入库</span></div>
+            <div class="drop" id="dropZone">
+              <div class="drop-icon">↓</div>
+              <div>拖入 <b>.txt / .ris / .enw / .bib / .csv / .json</b> 文件</div>
+              <div class="muted small">或 <button class="link" id="btnChoose">选择文件</button>（可多选）</div>
+              <input type="file" id="fileInput" multiple hidden accept=".txt,.ris,.enw,.bib,.bibtex,.csv,.json,.nbib">
+            </div>
+            <div class="howto">Web of Science → 检索结果 → <b>导出</b> → 选 <b>EndNote Desktop</b> 或 <b>RIS / 其他参考文献软件</b> → 保存后拖进来；文件里的 <code>UT WOS:…</code> 入藏号会被保留，用于一键跳回全记录页。</div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><h2>粘贴导入</h2><span class="muted">DOI / PMID / 题名列表 / WoS 文本</span></div>
+            <textarea id="pasteBox" class="inp area" placeholder="一行一个 DOI，也可直接粘贴 WoS/EndNote 导出文本或 BibTeX&#10;10.1038/nbt.3439&#10;10.1126/science.1258096"></textarea>
+            <div class="row-end"><button class="btn primary" id="btnParsePaste">解析并加入库</button></div>
+            <div class="howto">DOI 会自动向 OpenAlex 补全作者、期刊、摘要、被引数；离线导入的条目也可用「引文报告」里的批量刷新补全。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 02 同步 -->
+      <section class="view" id="v2">
+        <div class="hero slim"><div class="hero-tag">SYNC</div><h1>跨平台同步</h1><p>本地自动保存是默认；通过本服务访问时改为服务端持久化，同一网络内其他设备打开同一地址即可读到同一个库。</p></div>
+        <div class="grid3" id="syncStats"></div>
+        <div class="card">
+          <div class="card-hd"><h2>整库导出 / 恢复</h2><span class="muted">所有格式均可再导入，或与 Zotero / EndNote 互通</span></div>
+          <div class="btn-row">
+            <button class="btn" data-export="json">完整备份 .json</button>
+            <button class="btn" data-export="ris">RIS（Zotero / EndNote）</button>
+            <button class="btn" data-export="bib">BibTeX</button>
+            <button class="btn" data-export="csv">CSV 表格</button>
+            <button class="btn" data-export="html">自包含 HTML 快照</button>
+            <button class="btn ghost" id="btnImportState">恢复 .json 备份</button>
+            <input type="file" id="stateFile" accept=".json" hidden>
+          </div>
+          <div class="howto">把导出的 <b>.json</b> 放进 iCloud Drive / OneDrive（本机已装），在另一台设备打开本工作台后「恢复备份」即可。若通过 <code>http://127.0.0.1:8765</code> 访问，库自动写入 <code>paperdesk/data/state.json</code>，同一地址即同一份数据。</div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><h2>与 Zotero 互通</h2><span class="muted">本机已安装 Zotero 10.0.8</span></div>
+          <p class="para">导出 RIS 后在 Zotero 里 <b>文件 → 导入</b>；Zotero 的 Group Library 支持多人实时协作与云同步，可作为「边写边引」的桌面插件通道（Word / LibreOffice / WPS）。本工作台负责 WoS 深链、引文分析、期刊匹配与格式化输出，两者用 RIS / BibTeX 双向衔接，互不锁定。</p>
+        </div>
+      </section>
+
+      <!-- 03 全记录 -->
+      <section class="view" id="v3">
+        <div class="hero slim"><div class="hero-tag">FULL RECORD</div><h1>全记录页与相关文献</h1><p>每条文献生成 Web of Science 全记录深链（需机构订阅），并同时给出开放替代品；「相关记录」由 OpenAlex 的 related_works 实时拉取。</p></div>
+        <div class="card">
+          <div class="card-hd"><h2>库内文献</h2><span class="muted">点击即可跳转或展开相关记录</span></div>
+          <div id="wosList" class="list"></div>
+        </div>
+        <div class="card" id="relatedCard" hidden>
+          <div class="card-hd"><h2 id="relatedTitle">相关记录</h2><button class="btn ghost small" id="btnAddRelated">全部加入库</button></div>
+          <div id="relatedBox" class="list"></div>
+        </div>
+      </section>
+
+      <!-- 04 引文报告 -->
+      <section class="view" id="v4">
+        <div class="hero slim"><div class="hero-tag">CITATION REPORT</div><h1>引文报告</h1><p>批量刷新 OpenAlex 被引数据，生成可导出的影响力报告。WoS 引文报告需订阅，这里用开放引文索引做等价分析。</p></div>
+        <div class="card">
+          <div class="row-between">
+            <div><h2 style="margin:0">报告范围：当前全部文献</h2><span class="muted" id="citeHint">数据来自 OpenAlex 与 Europe PMC</span></div>
+            <div class="btn-row"><button class="btn primary" id="btnRefreshCites">刷新被引数据</button><button class="btn" id="btnExportReport">导出报告 CSV</button><button class="btn ghost" id="btnPrintReport">打印 / 存 PDF</button></div>
+          </div>
+        </div>
+        <div class="grid4" id="reportSummary"></div>
+        <div class="grid2">
+          <div class="card"><div class="card-hd"><h2>逐年被引分布</h2></div><div id="reportYear" class="chart"></div></div>
+          <div class="card"><div class="card-hd"><h2>高被引 Top 10</h2></div><div id="reportTop"></div></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><div class="card-hd"><h2>期刊分布</h2></div><div id="reportJournals" class="chart"></div></div>
+          <div class="card"><div class="card-hd"><h2>影响力细项</h2></div><div id="reportExtra"></div></div>
+        </div>
+      </section>
+
+      <!-- 05 管理分析 -->
+      <section class="view" id="v5">
+        <div class="hero slim"><div class="hero-tag">LIBRARY</div><h1>管理与分析</h1><p>分组、标签、备注、去重、全文检索，并把库结构画成图，看出研究脉络。</p></div>
+        <div class="card">
+          <div class="filter-row">
+            <input id="filterQ" class="inp grow" placeholder="检索题名 / 作者 / 期刊 / 摘要 / 标签">
+            <select id="filterGroup" class="inp"><option value="">全部分组</option></select>
+            <select id="filterTag" class="inp"><option value="">全部标签</option></select>
+            <select id="filterSort" class="inp"><option value="added">按加入时间</option><option value="year">按年份</option><option value="cited">按被引</option><option value="title">按题名</option></select>
+          </div>
+          <div class="filter-row sub">
+            <button class="btn small" id="btnNewGroup">＋ 新建分组</button>
+            <button class="btn small" id="btnGroupSelected">选中项加入分组</button>
+            <button class="btn small" id="btnTagSelected">批量加标签</button>
+            <button class="btn small" id="btnStarSelected">星标</button>
+            <button class="btn small" id="btnDeleteSelected">移除</button>
+            <button class="btn small ghost" id="btnDedup">去重</button>
+            <button class="btn small ghost" id="btnClearFilters">清除筛选</button>
+          </div>
+          <div id="libTable" class="table-wrap"></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><div class="card-hd"><h2>年度发文</h2></div><div id="chartYear" class="chart"></div></div>
+          <div class="card"><div class="card-hd"><h2>期刊 Top 10</h2></div><div id="chartJournal" class="chart"></div></div>
+          <div class="card"><div class="card-hd"><h2>研究主题 Top 10</h2></div><div id="chartTopic" class="chart"></div></div>
+          <div class="card"><div class="card-hd"><h2>高频作者 Top 10</h2></div><div id="chartAuthor" class="chart"></div></div>
+        </div>
+      </section>
+
+      <!-- 06 共享 -->
+      <section class="view" id="v6">
+        <div class="hero slim"><div class="hero-tag">SHARE</div><h1>共享文献图书馆</h1><p>生成只读分享快照，链接发给合作者即可查看，人数不受限；也可导出分组包供对方导入自己的库。</p></div>
+        <div class="grid2">
+          <div class="card">
+            <div class="card-hd"><h2>创建共享快照</h2></div>
+            <label class="field"><span>分享名称</span><input id="shareName" class="inp" placeholder="例如：课题组 · 基因编辑专题"></label>
+            <label class="field"><span>选择范围</span><select id="shareGroup" class="inp"><option value="__all">全部文献</option></select></label>
+            <label class="field"><span>附言</span><textarea id="shareNote" class="inp area short" placeholder="给合作者的说明（可选）"></textarea></label>
+            <div class="btn-row"><button class="btn primary" id="btnShare">生成共享链接</button><button class="btn" data-export="group-ris">导出分组 RIS</button><button class="btn" data-export="group-bib">导出分组 BibTeX</button></div>
+            <div class="howto" id="shareHint">通过本地服务访问时可生成在线链接；直接双击打开文件时会自动下载一个自包含 HTML 快照，发给对方即可打开。</div>
+          </div>
+          <div class="card">
+            <div class="card-hd"><h2>已创建的共享</h2><span class="muted">只读 · 可无限转发</span></div>
+            <div id="shareList" class="list"></div>
+          </div>
+        </div>
+        <div class="card"><div class="card-hd"><h2>实时协同的另一种做法</h2></div><p class="para">如果需要多人同时编辑、批注与权限管理，用本机 Zotero 建 <b>Group Library</b>（私有群组可邀请大量成员，支持云同步与 Word 插件）；本工作台的快照负责「一键发给 100 人看」，两者互补。所有分享链接都只指向你自己机器上的内容，不上传任何第三方服务器。</p></div>
+      </section>
+
+      <!-- 07 边写边引 -->
+      <section class="view" id="v7">
+        <div class="hero slim"><div class="hero-tag">WRITE & CITE</div><h1>边写边引</h1><p>在正文里插入引用标记，切换格式时全文编号与参考文献表一次性重排。导出 Word 可直接继续排版。</p></div>
+        <div class="card">
+          <div class="toolbar">
+            <label class="mini">引文样式 <select id="citeStyle" class="inp"><option value="gbt7714">GB/T 7714-2015</option><option value="apa">APA 7th</option><option value="vancouver">Vancouver / ICMJE</option><option value="nature">Nature</option><option value="ieee">IEEE</option><option value="chicago">Chicago</option><option value="mla">MLA 9</option></select></label>
+            <label class="mini">正文标注 <select id="citeMode" class="inp"><option value="numbered">数字 [1]</option><option value="author-year">作者-年</option></select></label>
+            <span class="grow"></span>
+            <button class="btn small" data-writeexport="md">导出 Markdown</button>
+            <button class="btn small" data-writeexport="html">导出 HTML</button>
+            <button class="btn small" data-writeexport="doc">导出 Word .doc</button>
+            <button class="btn small ghost" id="btnCopyBib">复制参考文献表</button>
+          </div>
+          <div class="write-grid">
+            <div class="write-left">
+              <div class="sub-hd">文献库 <span class="muted small">点击「引用」插入光标处</span></div>
+              <input id="citePickerQ" class="inp" placeholder="筛选文献…">
+              <div id="citePicker" class="picker"></div>
+            </div>
+            <div class="write-mid">
+              <div class="sub-hd">正文 <span class="muted small">标记形如 [[PD:编号]]</span></div>
+              <textarea id="manuscript" class="inp area editor" spellcheck="false" placeholder="在这里写论文…&#10;&#10;示例：已有研究表明基因编辑效率可显著提升 [[PD:1]]，但脱靶效应仍需控制。"></textarea>
+              <div class="sub-hd">实时预览</div>
+              <div id="preview" class="preview"></div>
+            </div>
+            <div class="write-right">
+              <div class="sub-hd">参考文献 <span class="badge soft" id="bibCount">0 条</span></div>
+              <div id="bibliography" class="bib"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card"><div class="card-hd"><h2>想要 Word 里原生「边写边引」？</h2></div><p class="para">本机 Zotero 10.0.8 自带 Word / LibreOffice / WPS 插件：Zotero → <b>设置 → 引用 → 文字处理软件</b> 安装插件，即可在 Word 里直接插入引文并一键换期刊格式（需先安装 Microsoft Word；当前机器未安装）。本工作台导出的 <b>.doc</b> 与 RIS 可直接衔接这条链路。</p></div>
+      </section>
+
+      <!-- 08 投稿模板 -->
+      <section class="view" id="v8">
+        <div class="hero slim"><div class="hero-tag">MANUSCRIPT</div><h1>期刊投稿模板</h1><p>选择目标期刊，生成符合其结构与引文格式的稿件骨架，并把写作区样式同步切换过去。</p></div>
+        <div class="card">
+          <div class="search-row">
+            <select id="journalSelect" class="inp grow"></select>
+            <input id="customJournal" class="inp" placeholder="或输入自定义期刊名">
+            <button class="btn primary" id="btnGenTemplate">生成模板</button>
+          </div>
+          <div id="templateMeta" class="grid4"></div>
+        </div>
+        <div class="card">
+          <div class="card-hd"><h2>稿件骨架</h2><div class="btn-row"><button class="btn small" id="btnApplyStyle">套用该期刊引文样式</button><button class="btn small" data-tplexport="md">导出 .md</button><button class="btn small" data-tplexport="doc">导出 Word .doc</button></div></div>
+          <textarea id="templatePreview" class="inp area tall" spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <!-- 09 期刊匹配 -->
+      <section class="view" id="v9">
+        <div class="hero slim"><div class="hero-tag">JOURNAL MATCHER</div><h1>文稿匹配投稿期刊</h1><p>根据标题与摘要提取主题，结合 OpenAlex 期刊主题、影响力指标，以及你库内文献的期刊分布打分，给出 Top 建议。</p></div>
+        <div class="card">
+          <label class="field"><span>论文标题</span><input id="matchTitle" class="inp" placeholder="例如：Single-cell atlas of CRISPR-edited renal organoids"></label>
+          <label class="field"><span>摘要</span><textarea id="matchAbstract" class="inp area short" placeholder="粘贴摘要，越完整匹配越准…"></textarea></label>
+          <div class="search-row sub">
+            <select id="matchFromLib" class="inp grow"><option value="">或从库中选一篇自动填入</option></select>
+            <button class="btn primary" id="btnMatch">匹配期刊</button>
+          </div>
+          <div class="howto">打分 = 主题词重合 + 期刊主题匹配 + 影响力指标 + 你已有参考文献的期刊重叠度。结果附官网与官方选刊工具入口，可一键套用该刊模板。</div>
+        </div>
+        <div id="matchResults" class="list"></div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+<div id="modal" class="modal hidden"><div class="modal-box"><div class="modal-hd"><h3 id="modalTitle">编辑</h3><button class="btn ghost small" id="modalClose">关闭</button></div><div id="modalBody"></div></div></div>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
