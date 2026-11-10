@@ -701,4 +701,10 @@ document.querySelectorAll('[data-tplexport]').forEach(b => b.onclick = () => {
 
 renderChips(); initJournals(); genTemplate('');
 renderAll(); go('v1');
+
+// 可分享的预填检索链接：https://<站点>/?q=CRISPR
+try {
+  const preset = new URLSearchParams(location.search);
+  if (preset.get('q')) { $('q').value = preset.get('q'); doSearch(1); }
+} catch (e) { }
 })();
