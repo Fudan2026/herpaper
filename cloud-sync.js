@@ -4,6 +4,12 @@
  * localStorage["supro.auth.session.v1"] (the HerPaper app is served same-origin
  * inside the SuPro shell on supro.si, so it can read the parent's session).
  *
+ * OPT-IN BY DESIGN (owner requirement 2026-11-11): cloud sync is OFF by
+ * default — local-first, zero cloud storage cost. The user flips it on in
+ * view 02 (跨平台同步) via #btnCloudToggle; the choice persists in
+ * localStorage["herpaper.cloudsync.enabled"]. Only when enabled AND signed in
+ * does anything touch /api/herpaper/library.
+ *
  * Loaded AFTER integrations.js (needs PD.toCSL / PD.fromCSL) and BEFORE app.js
  * (so it can wrap PD.init / PD.saveNow before app.js invokes them).
  *
@@ -20,6 +26,7 @@
   if (!PD) return;
 
   const LS_SESSION = 'supro.auth.session.v1';
+  const LS_ENABLED = 'herpaper.cloudsync.enabled';
   const API = '/api/herpaper/library';
 
   // Canonical sync key — must match the backend's stored item_key.
@@ -36,6 +43,28 @@
     } catch (e) { return null; }
   }
 
+  // The user's explicit choice. Default OFF — no cloud traffic without it.
+  function syncEnabled() {
+    try { return localStorage.getItem(LS_ENABLED) === '1'; } catch (e) { return false; }
+  }
+
+  function refreshCard() {
+    const state = document.getElementById('cloudSyncState');
+    const btn = document.getElementById('btnCloudToggle');
+    if (state) {
+      state.textContent = !syncEnabled()
+        ? '未开启 · 仅本机保存'
+        : (token() ? '已开启 · 云端自动同步' : '已开启 · 请先登录 SuPro');
+    }
+    if (btn) btn.textContent = syncEnabled() ? '关闭云端同步' : '开启云端同步';
+  }
+
+  function setEnabled(v) {
+    try { localStorage.setItem(LS_ENABLED, v ? '1' : '0'); } catch (e) { /* ignore */ }
+    refreshCard();
+    if (v) { pull(); } else { setStatus('grey', '本地模式 · 云同步未开启'); }
+  }
+
   function setStatus(kind, text) {
     const cls = { ok: 'green', warn: 'amber', grey: 'grey' };
     const dot = document.getElementById('statusDot');
@@ -45,15 +74,19 @@
     if (dot) dot.className = 'dot ' + (cls[kind] || 'grey');
     if (txt) txt.textContent = text;
     if (badge) badge.textContent = text;
-    if (hint && kind !== 'ok') hint.textContent = '未登录 SuPro · 仅本机保存';
+    if (hint && kind !== 'ok') {
+      hint.textContent = syncEnabled() ? '未登录 SuPro · 仅本机保存' : '云同步未开启 · 仅本机保存';
+    }
+    refreshCard();
   }
 
   let cloudKeys = new Set();
   let applyingRemote = false;
 
   async function pull() {
+    if (!syncEnabled()) { setStatus('grey', '本地模式 · 云同步未开启'); return; }
     const tk = token();
-    if (!tk) { setStatus('grey', '本地模式 · 未登录'); return; }
+    if (!tk) { setStatus('warn', '本地模式 · 未登录 SuPro'); return; }
     try {
       const r = await fetch(API, { headers: { Authorization: 'Bearer ' + tk } });
       if (r.status === 401) { setStatus('warn', '登录已过期 · 请重登'); return; }
@@ -89,7 +122,7 @@
   }
 
   async function push() {
-    if (applyingRemote) return;            // skip while applying pulled data
+    if (applyingRemote || !syncEnabled()) return; // local-only unless opted in
     const tk = token();
     if (!tk) return;                        // local-only mode
     try {
@@ -118,9 +151,12 @@
     }
   }
 
-  PD.CloudSync = { pull, push, token, enabled: () => !!token() };
+  PD.CloudSync = {
+    pull, push, token, setEnabled, syncEnabled,
+    enabled: () => !!token() && syncEnabled(),
+  };
 
-  // Wrap persistence so every local change also mirrors to the cloud.
+  // Wrap persistence so every local change also mirrors to the cloud (opt-in only).
   const origSaveNow = PD.saveNow;
   PD.saveNow = async function () {
     await origSaveNow.apply(this, arguments);
@@ -129,14 +165,19 @@
   const origInit = PD.init;
   PD.init = async function () {
     const ok = await origInit.apply(this, arguments);
-    PD.CloudSync.pull();
+    PD.CloudSync.pull(); // internally no-ops when sync is off
     return ok;
   };
 
-  // Light multi-device sync while a session is active. The interval registers
-  // with PD_HERPAPER_TEARDOWN so a platform re-render (route remount) clears it.
+  // View-02 opt-in card (static markup, survives app.js re-renders).
+  const toggle = document.getElementById('btnCloudToggle');
+  if (toggle) toggle.addEventListener('click', () => setEnabled(!syncEnabled()));
+  refreshCard();
+
+  // Light multi-device sync while a session is active AND sync is enabled.
+  // The interval registers with PD_HERPAPER_TEARDOWN so a route remount clears it.
   if (typeof setInterval === 'function') {
-    const syncTimer = setInterval(() => { if (PD.CloudSync.token()) PD.CloudSync.pull(); }, 60000);
+    const syncTimer = setInterval(() => { if (PD.CloudSync.enabled()) PD.CloudSync.pull(); }, 60000);
     (window.PD_HERPAPER_TEARDOWN = window.PD_HERPAPER_TEARDOWN || []).push(function () { clearInterval(syncTimer); });
   }
 })();
