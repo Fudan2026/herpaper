@@ -26,6 +26,7 @@
       <button class="nav-item" data-view="v9"><span class="num">09</span><span class="nav-txt">期刊匹配<i>文稿 → 目标期刊</i></span></button>
     </nav>
     <div class="side-foot">
+      <div class="status-line" id="streakLine" hidden><span class="dot on"></span><span id="streakBadge">已连续使用 1 天</span></div>
       <div class="status-line"><span class="dot" id="statusDot"></span><span id="statusText">初始化中…</span></div>
       <div class="side-hint">数据仅存本机 · 无需账号</div>
     </div>
@@ -35,6 +36,7 @@
     <header class="topbar">
       <div class="crumb"><span id="crumbNum">01</span><span id="crumbTitle">检索建库</span></div>
       <div class="top-actions">
+        <span class="badge date" id="dateBadge" hidden title="设备系统日期 · 大赛截图合规凭据">—</span>
         <span class="badge" id="modeBadge">检测存储中</span>
         <span class="badge soft"><b id="libCount">0</b> 篇文献</span>
         <a class="btn small ghost" href="promo.html">讲座 / 介绍</a>
@@ -55,7 +57,7 @@
           <div class="card-hd"><h2>联网检索</h2><span class="muted">开放学术索引 · 实时元数据与被引数</span></div>
           <div class="search-row">
             <input id="q" class="inp grow" placeholder="输入题名、主题、作者或 DOI，例如：CRISPR gene editing">
-            <select id="source" class="inp"><option value="openalex">OpenAlex</option><option value="epmc">Europe PMC</option><option value="doi">DOI 精确</option></select>
+            <select id="source" class="inp"><option value="openalex">OpenAlex</option><option value="epmc">Europe PMC</option><option value="arxiv">arXiv 金融·经济 (q-fin)</option><option value="s2">Semantic Scholar</option><option value="doi">DOI 精确</option></select>
             <select id="typeFilter" class="inp"><option value="">全部类型</option><option value="article">期刊论文</option><option value="review">综述</option><option value="preprint">预印本</option><option value="book-chapter">书章节</option></select>
           </div>
           <div class="search-row sub">
@@ -196,6 +198,8 @@
             <button class="btn small" id="btnStarSelected">星标</button>
             <button class="btn small" id="btnDeleteSelected">移除</button>
             <button class="btn small ghost" id="btnDedup">去重</button>
+            <button class="btn small ghost" id="btnMatrix">对比矩阵</button>
+            <button class="btn small ghost" id="btnFeedback">导出反馈草稿</button>
             <button class="btn small ghost" id="btnClearFilters">清除筛选</button>
           </div>
           <div id="libTable" class="table-wrap"></div>

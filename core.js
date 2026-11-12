@@ -126,6 +126,21 @@ PD.addItems = function (items, quiet) {
 };
 
 /* ---------- API ---------- */
+PD.fetchText = async function (url) {
+  const tries = [];
+  if (PD.serverMode) tries.push('/api/proxy?url=' + encodeURIComponent(url));
+  tries.push(url);
+  if (!PD.staticHost && location.protocol.startsWith('http') && !PD.serverMode) tries.push('/api/proxy?url=' + encodeURIComponent(url));
+  let last;
+  for (const u of tries) {
+    try {
+      const r = await fetch(u, { headers: { Accept: 'text/xml,application/xml,text/html;q=0.9,*/*;q=0.8' } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return await r.text();
+    } catch (e) { last = e; }
+  }
+  throw last || new Error('网络请求失败');
+};
 PD.fetchJSON = async function (url) {
   const tries = [];
   if (PD.serverMode) tries.push('/api/proxy?url=' + encodeURIComponent(url));
@@ -182,6 +197,54 @@ PD.normWork = function (w) {
   };
 };
 
+// arXiv Atom entry → library item (q-fin preprints; citedBy fills later via DOI refresh).
+PD.normArxiv = function (e) {
+  const txt = s => (s && s.textContent || '').trim();
+  const g = tag => e.querySelector(tag);
+  const absUrl = txt(g('id'));
+  const axId = (absUrl.match(/abs\/([^v]+v\d+|[^/]+)$/) || [])[1] || absUrl;
+  const doiEl = e.querySelector('doi'); // arXiv may carry a journal-ref DOI on some entries
+  const doi = doiEl ? PD.normDOI(txt(doiEl)) : '';
+  const authors = Array.from(e.querySelectorAll('author > name')).map(n => n.textContent.trim()).filter(Boolean);
+  const published = txt(g('published'));
+  return {
+    id: 'arxiv:' + axId,
+    title: txt(g('title')).replace(/\s+/g, ' ').replace(/\.$/, ''),
+    authors,
+    year: published.slice(0, 4) || '',
+    journal: 'arXiv (q-fin)',
+    doi,
+    type: 'preprint',
+    abstract: txt(g('summary')).replace(/\s+/g, ' ').slice(0, 1200),
+    citedBy: 0, countsByYear: [], fwci: null, percentile: null, concepts: [],
+    oaUrl: absUrl,
+    url: absUrl,
+    oaId: '', related: [], addedAt: Date.now(), source: 'arXiv',
+    tags: [], groups: [], starred: false, read: false, note: ''
+  };
+};
+
+// Semantic Scholar Graph API paper → library item.
+PD.normS2 = function (p) {
+  const doi = p.externalIds && p.externalIds.DOI ? PD.normDOI(p.externalIds.DOI) : '';
+  const pdf = p.openAccessPdf && p.openAccessPdf.url ? p.openAccessPdf.url : '';
+  return {
+    id: doi ? 'doi:' + doi : 's2:' + (p.paperId || PD.uid()),
+    title: (p.title || '').replace(/\.$/, ''),
+    authors: (p.authors || []).map(a => a.name).filter(Boolean),
+    year: p.year ? String(p.year) : '',
+    journal: p.venue || '',
+    doi,
+    type: '',
+    abstract: (p.abstract || '').slice(0, 1200),
+    citedBy: PD.num(p.citationCount), countsByYear: [], fwci: null, percentile: null, concepts: [],
+    oaUrl: pdf,
+    url: doi ? 'https://doi.org/' + doi : (p.paperId ? 'https://www.semanticscholar.org/paper/' + p.paperId : ''),
+    oaId: '', related: [], addedAt: Date.now(), source: 'Semantic Scholar',
+    tags: [], groups: [], starred: false, read: false, note: ''
+  };
+};
+
 PD.normEPMC = function (r) {
   const ji = r.journalInfo || {};
   const j = ji.journal || {};
@@ -205,6 +268,33 @@ PD.normEPMC = function (r) {
 
 PD.search = async function (o) {
   const page = o.page || 1, per = 20;
+  if (o.source === 'arxiv') {
+    // arXiv q-fin (Quantitative Finance). export.arxiv.org sends no CORS
+    // headers, so the SuPro side relays it via /api/herpaper/arxiv (allow-list).
+    const q = '(cat:q-fin.*) AND all:' + encodeURIComponent(o.q || '');
+    const direct = 'https://export.arxiv.org/api/query?search_query=' + encodeURIComponent(q) +
+      '&start=' + (page - 1) * per + '&max_results=' + per + '&sortBy=submittedDate&sortOrder=descending';
+    let xml = '';
+    try { xml = await PD.fetchText('/api/herpaper/arxiv?query=' + encodeURIComponent(o.q || '') + '&start=' + (page - 1) * per + '&max_results=' + per); }
+    catch (e) { xml = await PD.fetchText(direct); }
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('arXiv 响应解析失败');
+    let items = Array.from(doc.querySelectorAll('entry')).map(PD.normArxiv);
+    if (o.from) items = items.filter(x => PD.num(x.year) >= PD.num(o.from));
+    if (o.to) items = items.filter(x => PD.num(x.year) <= PD.num(o.to));
+    const tr = doc.querySelector('totalResults');
+    return { items, total: PD.num(tr && tr.textContent) || items.length, page };
+  }
+  if (o.source === 's2') {
+    // Semantic Scholar Graph API — CORS-enabled, free tier.
+    let u = 'https://api.semanticscholar.org/graph/v1/paper/search?query=' + encodeURIComponent(o.q || '') +
+      '&fields=title,abstract,year,authors,venue,externalIds,citationCount,openAccessPdf&limit=' + per + '&offset=' + (page - 1) * per;
+    if (o.from && o.to) u += '&year=' + o.from + '-' + o.to;
+    else if (o.from) u += '&year=' + o.from + '-';
+    else if (o.to) u += '&year=-' + o.to;
+    const d = await PD.fetchJSON(u);
+    return { items: (d.data || []).map(PD.normS2), total: PD.num(d.total), page };
+  }
   if (o.source === 'epmc') {
     let query = o.q;
     const u = 'https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=' + encodeURIComponent(query) +

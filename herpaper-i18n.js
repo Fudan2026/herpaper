@@ -38,6 +38,14 @@
     "本地模式 · 云同步未开启": "Local mode · cloud sync off",
     "云同步未开启 · 仅本机保存": "Cloud sync off · local only",
     "本地模式 · 未登录 SuPro": "Local mode · not signed in to SuPro",
+    "arXiv 金融·经济 (q-fin)": "arXiv Finance & Economics (q-fin)",
+    "设备系统日期 · 大赛截图合规凭据": "Device date · contest screenshot proof",
+    "对比矩阵": "Compare matrix",
+    "导出反馈草稿": "Export feedback draft",
+    "先在检索建库收几篇文献": "Collect papers in Search & Build first",
+    "摘要摘录": "Abstract excerpt",
+    "复制 Markdown": "Copy Markdown",
+    "反馈草稿已导出": "Feedback draft exported",
     "本地 · 云盘 · 多端": "Local · Cloud drive · Multi-device",
     "全记录与相关文献": "Full Records & Related",
     "WoS 深链 / 相关记录": "WoS deep links / Related records",
@@ -567,6 +575,9 @@
    * Applied with String.replace in order; anchored patterns first, then inline
    * label fragments that survive inside mixed nodes. */
   var PATTERNS = [
+    [/^已连续使用 (\d+) 天$/, "Active for $1 day(s) in a row"],
+    [/^文献对比矩阵（(\d+) 篇 · 选中项）$/, "Compare matrix ($1 selected items)"],
+    [/^文献对比矩阵（(\d+) 篇 · 最近 20 篇）$/, "Compare matrix (latest $1 items)"],
     [/^(\d+) 条$/, "$1 items"],
     [/^引文链条 · (.+)$/, "Citation chain · $1"],
     [/^(\d+) 个分区$/, "$1 partitions"],

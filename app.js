@@ -808,13 +808,93 @@ document.querySelectorAll('[data-tplexport]').forEach(b => b.onclick = () => {
   PD.toast('模板已导出');
 });
 
+/* ---------- 大赛赋能：日期徽章 / 连续使用 / 对比矩阵 / 反馈草稿 ---------- */
+function fmtDay(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function ensureUsageStreak() {
+  // Contest gate needs ≥3 consecutive days of dated screenshots — surface the
+  // streak in the sidebar so it is visible in every capture.
+  try {
+    const now = new Date();
+    const days = Array.isArray(PD.state.usageDays) ? PD.state.usageDays : [];
+    const today = fmtDay(now);
+    if (!days.includes(today)) days.push(today);
+    PD.state.usageDays = days.slice(-400);
+    const set = new Set(days);
+    let streak = 0;
+    const cur = new Date(now);
+    while (set.has(fmtDay(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
+    const db = $('dateBadge');
+    if (db) { db.textContent = today; db.hidden = false; }
+    const sb = $('streakLine');
+    if (sb) {
+      if (streak >= 1) { sb.hidden = false; $('streakBadge').textContent = '已连续使用 ' + streak + ' 天'; }
+      else sb.hidden = true;
+    }
+    PD.save();
+  } catch (e) { /* 非关键路径 */ }
+}
+function calcStreak() {
+  try {
+    const set = new Set(PD.state.usageDays || []);
+    let streak = 0; const cur = new Date();
+    while (set.has(fmtDay(cur))) { streak++; cur.setDate(cur.getDate() - 1); }
+    return streak;
+  } catch (e) { return 0; }
+}
+$('btnMatrix').onclick = () => {
+  const picked = sel.size ? lib().filter(x => sel.has(x.id)) : lib().slice(0, 20);
+  if (!picked.length) { PD.toast('先在检索建库收几篇文献'); return; }
+  const rows = picked.map(it => ({
+    title: it.title || '', authors: (it.authors || []).slice(0, 3).join(', '),
+    year: it.year || '', journal: it.journal || '', cited: it.citedBy || 0,
+    doi: it.doi || '', abstract: (it.abstract || '').slice(0, 160),
+  }));
+  const md = ['| 题名 | 作者 | 年份 | 期刊 | 被引 | DOI | 摘要摘录 |', '|---|---|---|---|---|---|---|']
+    .concat(rows.map(r => '| ' + [r.title, r.authors, r.year, r.journal, r.cited, r.doi, r.abstract].map(x => String(x).replace(/\|/g, '/')).join(' | ') + ' |'))
+    .join('\n');
+  modal('文献对比矩阵（' + rows.length + ' 篇' + (sel.size ? ' · 选中项' : ' · 最近 20 篇') + '）',
+    '<div class="table-wrap" style="max-height:420px"><table><thead><tr><th>题名</th><th>作者</th><th>年份</th><th>期刊</th><th>被引</th><th>DOI</th><th>摘要摘录</th></tr></thead><tbody>' +
+    rows.map(r => '<tr><td>' + esc(r.title) + '</td><td>' + esc(r.authors) + '</td><td>' + esc(r.year) + '</td><td>' + esc(r.journal) + '</td><td>' + r.cited + '</td><td>' + esc(r.doi) + '</td><td>' + esc(r.abstract) + '</td></tr>').join('') +
+    '</tbody></table></div><div class="row-end" style="margin-top:12px"><button class="btn primary" id="btnMatrixCopy">复制 Markdown</button></div>');
+  $('btnMatrixCopy').onclick = () => {
+    navigator.clipboard.writeText(md).then(() => { PD.toast('已复制到剪贴板'); }, () => { PD.toast('复制失败，请手动选择'); });
+  };
+};
+$('btnFeedback').onclick = () => {
+  const streak = calcStreak();
+  const groups = (PD.state.groups || []).length || new Set(lib().map(x => (x.groups || []).join(','))).size;
+  const md = [
+    '# Her Paper 文献工作台体验与反馈', '',
+    '- 队伍 / 作者：', '- 生成日期：' + fmtDay(new Date()),
+    '- 连续使用：' + streak + ' 天（累计 ' + ((PD.state.usageDays || []).length) + ' 天）',
+    '- 文献库规模：' + lib().length + ' 篇 · 分组 ' + groups + ' 个', '',
+    '## 一、我们用到的功能', '',
+    '- 检索建库：OpenAlex / Europe PMC / arXiv (q-fin) / Semantic Scholar / DOI 精确 / WoS 导入',
+    '- 分组与标签、星标与备注、去重与全文检索',
+    '- 引文报告（被引 / h 指数 / 逐年分布）',
+    '- 边写边引（GB/T 7714 / APA / Vancouver 等一键切换）',
+    '- 投稿模板与期刊匹配', '',
+    '## 二、遇到的痛点（请具体描述，写清楚在哪一步卡住）', '',
+    '1. ', '2. ', '', '## 三、产品优化建议（≥2 条，Her Paper 或与 Supro 衔接均可）', '',
+    '1. ', '2. ', '', '## 四、界面截图清单', '',
+    '> 大赛要求：连续 ≥3 天、清晰含当天设备系统日期的界面截图，严禁 AI 伪造。顶部日期徽章即设备日期，截图时请保持可见。',
+  ].join('\n');
+  PD.download('herpaper-feedback-draft.md', md, 'text/markdown');
+  PD.toast('反馈草稿已导出');
+};
+
 renderChips(); initJournals(); genTemplate('');
+ensureUsageStreak();
 renderAll(); go('v1');
 refreshZoteroStatus();
 
-// 可分享的预填检索链接：https://<站点>/?q=CRISPR
+// 可分享的预填检索链接：https://<站点>/?q=CRISPR&source=arxiv
 try {
   const preset = new URLSearchParams(location.search);
-  if (preset.get('q')) { $('q').value = preset.get('q'); doSearch(1); }
+  if (preset.get('q')) { $('q').value = preset.get('q'); }
+  if (preset.get('source')) { $('source').value = preset.get('source'); }
+  if (preset.get('q')) { doSearch(1); }
 } catch (e) { }
 })();

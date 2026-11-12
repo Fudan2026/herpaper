@@ -47,6 +47,10 @@ a:hover{text-decoration:underline}
 .badge{font-size:11.5px;background:#f0f2f8;border:1px solid var(--line);border-radius:99px;padding:4px 11px;color:var(--ink2)}
 .badge.soft{background:#fff}
 .badge b{color:var(--brand)}
+/* 大赛截图合规：设备日期徽章常显于顶栏，一眼可见 */
+.badge.date{background:var(--brand-soft);border-color:var(--brand);color:var(--brand);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.badge.streak{background:#eefaf3;border-color:var(--ok);color:var(--ok);font-weight:700}
+.status-line{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--ink2)}
 .content{flex:1;overflow:auto;padding:24px 26px 60px;scroll-behavior:smooth}
 .view{display:none;animation:fade .3s ease}
 .view.active{display:block}
