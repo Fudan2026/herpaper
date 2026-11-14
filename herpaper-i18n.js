@@ -641,7 +641,11 @@
     "Enter 执行": "Enter Run",
     "Esc 关闭": "Esc Close",
     "命令面板内：↑↓ 选择 · Enter 执行 · Esc 关闭。": "In the palette: ↑↓ navigate · Enter run · Esc close.",
-    "引文图谱": "Citation map"
+    "引文图谱": "Citation map",
+    "本机存储已满，已自动导出备份 JSON，请下载后清理空间再恢复": "Local storage is full — an emergency JSON backup was exported. Free some space, then restore it.",
+    "当前离线": "You are offline",
+    "HerPaper 的壳已缓存到本机。联网后刷新即可继续检索与同步；你的文献库仍保存在本机浏览器中。": "The HerPaper shell is cached on this device. Refresh once you are back online to keep searching and syncing; your library remains in this browser.",
+    "返回工作台": "Back to the workbench"
   };
 
   /* Parameterized strings: rendered counters/toasts the exact map cannot hit.

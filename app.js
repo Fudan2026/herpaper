@@ -1060,6 +1060,28 @@ ensureUsageStreak();
 renderAll(); go(initialView());
 refreshZoteroStatus();
 
+/* ---------- PWA（仅独立托管注册：supro 嵌入态不同步 manifest/sw，避免 404） ---------- */
+(function registerPWA() {
+  if (EMBEDDED) return;
+  if (!PD.staticHost && location.hostname !== '127.0.0.1' && location.hostname !== 'localhost') return;
+  // Manifest link (not inlined into index.html so the supro sync contract stays clean)
+  if (!document.querySelector('link[rel="manifest"]')) {
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'manifest.webmanifest';
+    document.head.appendChild(link);
+  }
+  if (!document.querySelector('meta[name="theme-color"]')) {
+    const m = document.createElement('meta');
+    m.name = 'theme-color';
+    m.content = '#4f46e5';
+    document.head.appendChild(m);
+  }
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === '127.0.0.1' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('./sw.js').catch(() => { /* offline-optional */ });
+  }
+})();
+
 // 可分享的预填检索链接：https://<站点>/?q=CRISPR&source=arxiv
 try {
   const preset = new URLSearchParams(location.search);

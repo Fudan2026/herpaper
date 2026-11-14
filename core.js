@@ -56,12 +56,28 @@ PD.saveNow = async function () {
   PD.state.updatedAt = Date.now();
   if (PD.serverMode) {
     try { await fetch('/api/state', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(PD.state) }); }
-    catch (e) { PD.toast('服务端保存失败，已回退到本地'); localStorage.setItem(LS_KEY, JSON.stringify(PD.state)); }
+    catch (e) {
+      PD.toast('服务端保存失败，已回退到本地');
+      try { localStorage.setItem(LS_KEY, JSON.stringify(PD.state)); }
+      catch (err) { PD.handleQuota(err); }
+    }
   } else {
     try { localStorage.setItem(LS_KEY, JSON.stringify(PD.state)); }
-    catch (e) { PD.toast('本地存储写入失败'); }
+    catch (e) { PD.handleQuota(e); }
   }
   if (PD.onState) PD.onState();
+};
+
+/** QuotaExceededError → toast + emergency JSON backup so the user never loses the library. */
+PD.handleQuota = function (err) {
+  const quota = err && (err.name === 'QuotaExceededError' || /quota/i.test(String(err && err.message || err)));
+  if (quota) {
+    PD.toast('本机存储已满，已自动导出备份 JSON，请下载后清理空间再恢复', 6000);
+    try { PD.download('herpaper-emergency-backup-' + Date.now() + '.json', JSON.stringify(PD.state, null, 1), 'application/json'); }
+    catch (e) { /* download may also fail in rare sandboxes */ }
+  } else {
+    PD.toast('本地存储写入失败');
+  }
 };
 
 PD.init = async function () {

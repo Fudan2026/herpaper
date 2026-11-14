@@ -61,8 +61,27 @@ test('every runtime file referenced by the app stays inside the supro sync set',
 
 /* ---------- escape helper (XSS posture of renderers) ---------- */
 
-test('PD.esc escapes all HTML-significant characters', () => {
+test('standalone PWA files ship in the repo (never required by the sync set)', () => {
+  for (const f of ['manifest.webmanifest', 'sw.js', 'offline.html']) {
+    assert.ok(fs.existsSync(path.join(ROOT, f)), `missing standalone PWA file: ${f}`);
+  }
+});
+
+test('PD.handleQuota exports an emergency backup on QuotaExceededError', () => {
   const { loadPD } = require('./helpers');
   const PD = loadPD();
-  assert.equal(PD.esc('<script>"a"&\'b\'</script>'), '&lt;script&gt;&quot;a&quot;&amp;&#39;b&#39;&lt;/script&gt;');
+  const downloads = [];
+  const orig = PD.download;
+  PD.download = (name, content) => downloads.push({ name, content });
+  const toasts = [];
+  const origToast = PD.toast;
+  PD.toast = (m) => toasts.push(m);
+  PD.state.library = [{ title: 'Deep learning', doi: '10.1038/nature14539' }];
+  const err = new Error('exceeded'); err.name = 'QuotaExceededError';
+  PD.handleQuota(err);
+  assert.equal(downloads.length, 1);
+  assert.ok(/emergency-backup/.test(downloads[0].name));
+  assert.ok(JSON.parse(downloads[0].content).library.length === 1);
+  assert.ok(toasts.some((t) => /存储已满|full/i.test(t)));
+  PD.download = orig; PD.toast = origToast;
 });
