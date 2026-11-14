@@ -1,0 +1,12 @@
+{
+  "date": "2026-11-14",
+  "url": "http://127.0.0.1:8765/",
+  "formFactor": "mobile",
+  "scores": {
+    "performance": 93,
+    "accessibility": 96,
+    "best-practices": 96,
+    "seo": 100
+  },
+  "note": "Performance 93 (FCP/LCP on cold headless). Accessibility 96, Best-practices 96, SEO 100. Production Pages host is staticHost so /api/state 404s do not appear."
+}

@@ -39,7 +39,7 @@ a:hover{text-decoration:underline}
 .nav-item{width:100%;display:flex;gap:11px;align-items:center;text-align:left;border:0;background:transparent;padding:9px 10px;border-radius:10px;cursor:pointer;margin-bottom:2px;transition:.18s}
 .nav-item:hover{background:var(--chip)}
 .nav-item.active{background:linear-gradient(100deg,var(--brand-soft),#f2fbfa);box-shadow:inset 3px 0 0 var(--brand)}
-.nav-item .num{font-size:10px;font-weight:800;color:var(--muted);background:var(--subtle);border-radius:6px;padding:3px 5px;min-width:24px;text-align:center}
+.nav-item .num{font-size:10px;font-weight:800;color:var(--ink2);background:var(--subtle);border-radius:6px;padding:3px 5px;min-width:24px;text-align:center}
 .nav-item.active .num{background:var(--brand);color:#fff}
 .nav-txt{font-size:13px;font-weight:600;line-height:1.25}
 .nav-txt i{display:block;font-style:normal;font-size:10.5px;color:var(--muted);font-weight:400;margin-top:2px}

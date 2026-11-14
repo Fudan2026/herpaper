@@ -38,8 +38,8 @@
       toggle.style.display = 'none'; // the platform locale toggle owns this
     } else {
       toggle.textContent = locale === 'en' ? '中' : 'EN';
-      toggle.title = locale === 'en' ? '切换到中文' : 'Switch to English';
-      toggle.setAttribute('aria-label', toggle.title);
+      toggle.title = locale === 'en' ? '中' : 'EN';
+      toggle.setAttribute('aria-label', locale === 'en' ? '中' : 'EN');
       toggle.addEventListener('click', function () {
         try { localStorage.setItem('herpaper.locale', locale === 'en' ? 'zh' : 'en'); } catch (e) { /* ignore */ }
         location.reload();
@@ -645,6 +645,8 @@
     "本机存储已满，已自动导出备份 JSON，请下载后清理空间再恢复": "Local storage is full — an emergency JSON backup was exported. Free some space, then restore it.",
     "当前离线": "You are offline",
     "HerPaper 的壳已缓存到本机。联网后刷新即可继续检索与同步；你的文献库仍保存在本机浏览器中。": "The HerPaper shell is cached on this device. Refresh once you are back online to keep searching and syncing; your library remains in this browser.",
+    "检索数据源": "Search source",
+    "文献类型": "Document type",
     "返回工作台": "Back to the workbench"
   };
 
