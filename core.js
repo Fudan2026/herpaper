@@ -539,12 +539,19 @@ PD.parseCSV = function (text) {
   const rows = csvRows(text.replace(/^\ufeff/, ''));
   if (!rows.length) return [];
   const head = rows[0].map(h => h.trim().toLowerCase());
-  const col = keys => { for (const k of keys) { const i = head.findIndex(h => h === k || h.includes(k)); if (i >= 0) return i; } return -1; };
+  // Two-pass column detection: exact header names first, substring only as a
+  // fallback. A single includes() pass lets short keys mis-hit mid-word (the
+  // "ut" key used to grab the Authors column via "aUThors").
+  const col = keys => {
+    for (const k of keys) { const i = head.findIndex(h => h === k); if (i >= 0) return i; }
+    for (const k of keys) { const i = head.findIndex(h => h.includes(k)); if (i >= 0) return i; }
+    return -1;
+  };
   const idx = {
     title: col(['article title', 'title', '题名']), author: col(['authors', 'author', '作者']),
     year: col(['publication year', 'year', '年份']), journal: col(['source title', 'journal', '期刊']),
     doi: col(['doi']), abstract: col(['abstract', '摘要']), cited: col(['times cited', 'cited', '被引']),
-    ut: col(['ut (unique', 'accession number', 'ut']), volume: col(['volume']), issue: col(['issue']), pages: col(['pages']), kw: col(['author keywords', 'keywords'])
+    ut: col(['ut (unique', 'accession number', 'wos_ut', 'ut']), volume: col(['volume']), issue: col(['issue']), pages: col(['pages']), kw: col(['author keywords', 'keywords', 'tags'])
   };
   if (idx.title < 0) return [];
   const get = (r, i) => i >= 0 && r[i] != null ? r[i].trim() : '';
