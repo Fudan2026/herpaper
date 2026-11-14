@@ -51,7 +51,12 @@ function go(v) {
   $('crumbNum').textContent = NAV[v][0]; $('crumbTitle').textContent = NAV[v][1];
   document.querySelector('.content').scrollTop = 0;
   if (!EMBEDDED) {
-    try { const u = new URL(location.href); u.searchParams.set('view', v); history.replaceState(null, '', u); } catch (e) { }
+    try {
+      const u = new URL(location.href);
+      u.searchParams.set('view', v);
+      history.replaceState(null, '', u);
+      localStorage.setItem('herpaper.lastView', v);
+    } catch (e) { }
   }
 }
 
@@ -122,7 +127,7 @@ function renderResults() {
     '<div class="meta">' + esc((it.authors || []).slice(0, 4).join(', ')) + '</div>' +
     (it.abstract ? '<div class="abs">' + esc(it.abstract.slice(0, 240)) + '</div>' : '') +
     '<div>' + (it.concepts || []).slice(0, 4).map(c => '<span class="tag brand">' + esc(c) + '</span>').join('') + '</div>' +
-    '</div><div class="result-actions"><button class="btn small primary" data-act="add-one" data-id="' + esc(it.id) + '">加入库</button>' +
+    '</div><div class="result-actions"><button class="btn small primary" data-act="add-one" data-id="' + esc(it.id) + '"' + (lib().some(x => PD.keyOf(x) === PD.keyOf(it)) ? ' disabled' : '') + '>' + (lib().some(x => PD.keyOf(x) === PD.keyOf(it)) ? '已在库中' : '加入库') + '</button>' +
     '<a class="btn small" target="_blank" href="' + esc(PD.wosURL(it)) + '">WoS ↗</a></div></div>'
   ).join('');
   $('pageInfo').textContent = '第 ' + page + ' 页 · 约 ' + total.toLocaleString() + ' 条命中';
@@ -561,8 +566,31 @@ function renderMatch() {
 }
 
 /* ---------- 渲染总入口 ---------- */
+function renderResume() {
+  const v1 = document.getElementById('v1');
+  if (!v1) return;
+  let host = document.getElementById('resumeStrip');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'resumeStrip';
+    const hero = v1.querySelector('.hero');
+    if (hero) hero.insertAdjacentElement('afterend', host);
+    else v1.prepend(host);
+  }
+  const ms = (PD.state.manuscript || '').trim();
+  const n = lib().length;
+  if (!ms && !n) { host.hidden = true; host.innerHTML = ''; return; }
+  host.hidden = false;
+  host.className = 'card resume';
+  host.innerHTML =
+    '<div class="resume-row">' +
+    (ms ? '<button class="btn primary" type="button" data-act="resume-write">接着写</button><span class="muted">文稿还停在这里，打开就能继续。</span>' : '') +
+    (n ? '<button class="btn" type="button" data-act="resume-lib">去整理</button><span class="muted">库里已有 ' + n + ' 篇</span>' : '') +
+    '</div>';
+}
 function renderAll() {
   updateHeader();
+  renderResume();
   $('manuscript').value = PD.state.manuscript || '';
   $('citeStyle').value = PD.state.settings.style || 'gbt7714';
   $('citeMode').value = PD.state.settings.citeMode || 'numbered';
@@ -821,7 +849,12 @@ document.addEventListener('click', e => {
   const act = b.dataset.act, id = b.dataset.id;
   if (act === 'chip') { $('q').value = b.dataset.q; doSearch(1); }
   else if (act === 'demo') loadDemo();
-  else if (act === 'add-one') { const it = PD.searchResults.find(x => x.id === id); if (it) { PD.addItems([it]); renderAll(); } }
+  else if (act === 'add-one') {
+    const it = PD.searchResults.find(x => x.id === id);
+    if (it) { PD.addItems([it]); b.textContent = '已收入'; b.disabled = true; renderAll(); }
+  }
+  else if (act === 'resume-write') go('v7');
+  else if (act === 'resume-lib') go('v5');
   else if (act === 'add-related') { const it = PD.relatedItems.find(x => x.id === id); if (it) { PD.addItems([it]); renderAll(); } }
   else if (act === 'related') showRelated(id);
   else if (act === 'chain') showChain(id);
@@ -1051,7 +1084,14 @@ function showShortcuts() {
 /* ---------- 视图深链（?view=v1..v9，嵌入态不改平台 URL） ---------- */
 function initialView() {
   if (EMBEDDED) return 'v1';
-  try { const v = new URLSearchParams(location.search).get('view'); if (/^v[1-9]$/.test(v)) return v; } catch (e) { }
+  try {
+    const q = new URLSearchParams(location.search);
+    const v = q.get('view');
+    if (/^v[1-9]$/.test(v)) return v;
+    if (q.get('q')) return 'v1';
+    const last = localStorage.getItem('herpaper.lastView');
+    if (/^v[1-9]$/.test(last)) return last;
+  } catch (e) { }
   return 'v1';
 }
 

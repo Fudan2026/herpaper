@@ -4,6 +4,13 @@
 
 All notable changes are documented here, following [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and semantic versioning.
 
+## [1.5.0] — 2026-11-14
+
+### Added
+- 记住上次离开的视图（独立站点；带 `?view=` 或 `?q=` 的链接仍优先）。
+- 检索页的「接着写 / 去整理」：文稿和文献库都还在，打开就能继续。
+- 检索结果若已在库中，按钮变为「已在库中」，避免重复入库。
+
 ## [Unreleased] — v1.0.0 候选 · current wave
 
 ### Added

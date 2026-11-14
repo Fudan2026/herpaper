@@ -101,6 +101,8 @@ a:hover{text-decoration:underline}
 .btn:hover{border-color:#c7cdf5;background:var(--btn-hover);transform:translateY(-1px)}
 .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.22)}
 .btn.primary:hover{background:#4338ca}
+.btn:active{transform:translateY(0) scale(.98)}
+.btn:disabled{opacity:.55;cursor:default;transform:none}
 .btn.ghost{background:transparent;color:var(--ink2)}
 .btn.small{padding:6px 10px;font-size:12px}
 .link{border:0;background:transparent;color:var(--brand);cursor:pointer;padding:0;font-weight:600;text-decoration:underline}
@@ -259,6 +261,10 @@ button:focus-visible,a:focus-visible,select:focus-visible,[tabindex]:focus-visib
 .graph-legend .dotg{width:9px;height:9px;border-radius:50%;flex:none}
 
 /* ---------- 动效偏好 ---------- */
+.resume{padding:12px 16px}
+.resume-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.resume .muted{font-size:12.5px}
+
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
   .skel::after{display:none}
