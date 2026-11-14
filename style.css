@@ -37,6 +37,8 @@ a:hover{text-decoration:underline}
 .dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(5,150,105,.14)}
 .dot.warn{background:var(--warn);box-shadow:0 0 0 3px rgba(217,119,6,.14)}
 .side-hint{margin-top:5px}
+.side-actions{display:flex;gap:8px;margin-top:10px}
+@media(max-width:1000px){.app{grid-template-columns:66px 1fr}.nav-txt,.brand-name,.brand-sub,.side-hint{display:none}.side-actions{justify-content:center}.brand{justify-content:center;padding:16px 8px}.nav-item{justify-content:center}.grid2,.grid3{grid-template-columns:1fr}}
 
 /* topbar */
 .main{display:flex;flex-direction:column;min-width:0;min-height:0}

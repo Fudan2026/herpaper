@@ -17,7 +17,36 @@
  */
 (function () {
   'use strict';
-  var locale = (window.PD_SUPRO_LOCALE || 'zh');
+
+  /* Locale resolution:
+   *  - SuPro embed: the platform sets window.PD_SUPRO_LOCALE on every mount —
+   *    it always wins and the in-app toggle stays hidden.
+   *  - Standalone (GitHub Pages / local server / file://): the user's own
+   *    choice persists in localStorage["herpaper.locale"] (default zh). */
+  var EMBEDDED = typeof window.PD_SUPRO_LOCALE === 'string';
+  function storedLocale() {
+    try { return localStorage.getItem('herpaper.locale') || 'zh'; } catch (e) { return 'zh'; }
+  }
+  var locale = EMBEDDED ? window.PD_SUPRO_LOCALE : storedLocale();
+  try {
+    if (document.documentElement) document.documentElement.lang = (locale === 'en' ? 'en' : 'zh-CN');
+  } catch (e) { /* headless contexts */ }
+
+  var toggle = document.getElementById('btnLocale');
+  if (toggle) {
+    if (EMBEDDED) {
+      toggle.style.display = 'none'; // the platform locale toggle owns this
+    } else {
+      toggle.textContent = locale === 'en' ? '中' : 'EN';
+      toggle.title = locale === 'en' ? '切换到中文' : 'Switch to English';
+      toggle.setAttribute('aria-label', toggle.title);
+      toggle.addEventListener('click', function () {
+        try { localStorage.setItem('herpaper.locale', locale === 'en' ? 'zh' : 'en'); } catch (e) { /* ignore */ }
+        location.reload();
+      });
+    }
+  }
+
   if (locale !== 'en') return;
   if (!document.body) return;
 
@@ -568,7 +597,19 @@
     "在这里写论文…\n\n示例：已有研究表明基因编辑效率可显著提升 [[PD:1]]，但脱靶效应仍需控制。": "Write your paper here…\n\nExample: Studies show gene-editing efficiency can be markedly improved [[PD:1]], but off-target effects remain a concern.",
     "或输入自定义期刊名": "Or enter a custom journal",
     "粘贴摘要，越完整匹配越准…": "Paste the abstract; the more complete, the better the match…",
-    "新分组名": "New group name"
+    "新分组名": "New group name",
+
+    // --- coverage-audit additions (2026-11-14 sweep) ---
+    "例如：Single-cell atlas of CRISPR-edited renal organoids": "e.g., Single-cell atlas of CRISPR-edited renal organoids",
+    "以 DOI/题名跳转": "Jump via DOI/title",
+    "正在检索 OpenAlex 期刊库并打分…": "Searching and scoring the OpenAlex journal index…",
+    "没有检索到匹配期刊，换个标题或补充摘要再试。": "No matching journals found. Try another title or a fuller abstract.",
+    "已移除": "Removed",
+    "· 选中项": "· selected",
+    "· 最近 20 篇": "· latest 20",
+    "arXiv 响应解析失败": "Failed to parse the arXiv response",
+    "套用该刊模板": "Use this journal's template",
+    "可改用「粘贴导入」，或在本地服务模式下由代理转发。": "Try Paste Import instead, or switch to local-server mode where the proxy forwards the request."
   };
 
   /* Parameterized strings: rendered counters/toasts the exact map cannot hit.
@@ -637,8 +678,11 @@
     return out;
   }
 
-  // Never touch the user's own words.
+  // Never touch the user's own words (values inside these areas are the
+  // user's text). Placeholders are instructional chrome, not user content,
+  // so the attribute pass below uses a narrower skip and translates them.
   var SKIP = 'textarea, #manuscript, #templatePreview, #preview, #pasteBox, #matchAbstract, #shareNote, script, style';
+  var ATTR_SKIP = 'script, style';
 
   var root = document.querySelector('.herpaper-embed') || document.body;
   var scheduled = false;
@@ -662,7 +706,7 @@
       var els = node.querySelectorAll ? node.querySelectorAll('[placeholder],[title],[aria-label]') : [];
       for (var k = 0; k < els.length; k++) {
         var el = els[k];
-        if (el.closest && el.closest(SKIP)) continue;
+        if (el.closest && el.closest(ATTR_SKIP)) continue;
         var attrs = ['placeholder', 'title', 'aria-label'];
         for (var a = 0; a < attrs.length; a++) {
           var v = el.getAttribute(attrs[a]);
