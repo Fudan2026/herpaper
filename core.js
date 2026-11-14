@@ -563,7 +563,7 @@ PD.parseCSV = function (text) {
       year: (get(r, idx.year).match(/(19|20)\d{2}/) || [''])[0], journal: get(r, idx.journal),
       doi, pmid: '', ut: get(r, idx.ut), type: '', volume: get(r, idx.volume), issue: get(r, idx.issue),
       pages: get(r, idx.pages), abstract: get(r, idx.abstract), citedBy: PD.num(get(r, idx.cited)),
-      keywords: get(r, idx.kw).split(';').filter(Boolean), tags: [], groups: [], starred: false, read: false, note: '',
+      keywords: get(r, idx.kw).split(';').map(s => s.trim()).filter(Boolean), tags: [], groups: [], starred: false, read: false, note: '',
       addedAt: Date.now(), source: 'CSV', concepts: [], countsByYear: [], related: [],
       url: doi ? 'https://doi.org/' + doi : ''
     };
