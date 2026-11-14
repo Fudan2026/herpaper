@@ -7,6 +7,8 @@ const lib = () => PD.state.library;
 const find = id => lib().find(x => x.id === id);
 const sel = new Set();
 let view = 'v1', page = 1, query = null, total = 0;
+/* supro 内嵌标记：父级在装载脚本前设置 PD_SUPRO_LOCALE；独立模式始终未定义 */
+const EMBEDDED = typeof window.PD_SUPRO_LOCALE === 'string';
 let templateText = '', templateJournal = PD.JOURNALS[0], matchList = [];
 
 /* 只读分享页：直接输出自包含快照，不进入主应用 */
@@ -48,6 +50,9 @@ function go(v) {
   document.querySelectorAll('.view').forEach(s => s.classList.toggle('active', s.id === v));
   $('crumbNum').textContent = NAV[v][0]; $('crumbTitle').textContent = NAV[v][1];
   document.querySelector('.content').scrollTop = 0;
+  if (!EMBEDDED) {
+    try { const u = new URL(location.href); u.searchParams.set('view', v); history.replaceState(null, '', u); } catch (e) { }
+  }
 }
 
 function modal(title, html) {
@@ -94,14 +99,19 @@ async function doSearch(p) {
   if (!q) { PD.toast('先输入关键词或 DOI'); return; }
   page = p || 1;
   query = { q, source: $('source').value, from: $('yearFrom').value, to: $('yearTo').value, type: $('typeFilter').value, oa: $('oaOnly').checked };
-  $('searchResults').innerHTML = '<div class="empty">正在检索…</div>';
+  $('searchResults').innerHTML = '<span class="sr-only">正在检索…</span>' + '<div class="skel" style="height:72px"></div>'.repeat(3);
+  $('searchResults').setAttribute('aria-busy', 'true');
   try {
     const r = await PD.search(Object.assign({}, query, { page }));
     PD.searchResults = r.items; total = r.total;
     renderResults();
-  } catch (e) { $('searchResults').innerHTML = '<div class="empty">检索失败：' + esc(e.message) + '<br>可改用「粘贴导入」，或在本地服务模式下由代理转发。</div>'; }
+  } catch (e) {
+    $('searchResults').removeAttribute('aria-busy');
+    $('searchResults').innerHTML = '<div class="empty">检索失败：' + esc(e.message) + '<br>可改用「粘贴导入」，或在本地服务模式下由代理转发。</div>';
+  }
 }
 function renderResults() {
+  $('searchResults').removeAttribute('aria-busy');
   const box = $('searchResults');
   if (!PD.searchResults.length) { box.innerHTML = '<div class="empty">没有匹配结果，换个关键词或数据源试试。</div>'; }
   else box.innerHTML = PD.searchResults.map(it =>
@@ -761,7 +771,11 @@ async function showChain(id) {
       '<div class="muted">' + label + ' · ' + esc(x.journal || '—') + ' · ' + esc(x.year || '—') + ' · 被引 ' + x.citedBy + '</div></div>' +
       '<button class="btn small" data-act="chain-add" data-id="' + esc(x.id) + '" data-kind="' + cls + '">加入库</button></div>').join('');
     $('chainBox').innerHTML =
-      '<div class="sub-hd">出链 · 该文引用的文献（' + c.outgoing.length + '）</div>' + (rows(c.outgoing, '参考', 'out') || '<div class="empty">无</div>') +
+      '<div class="graph-wrap"><div class="g-title">引文图谱 · ' + esc((it.title || '').slice(0, 40)) + '</div>' + chainGraphSVG(c.seed, c.outgoing, c.incoming) +
+      '<div class="graph-legend"><span class="lg"><span class="dotg" style="background:#818cf8"></span>该文引用 ' + c.outgoing.length + ' 篇</span>' +
+      '<span class="lg"><span class="dotg" style="background:#2dd4bf"></span>引用该文 ' + c.incoming.length + ' 篇</span>' +
+      '<span class="lg"><span class="dotg" style="background:#4f46e5"></span>本文 · 被引 ' + c.seed.citedBy + '</span></div></div>' +
+      '<div class="sub-hd" style="margin-top:14px">出链 · 该文引用的文献（' + c.outgoing.length + '）</div>' + (rows(c.outgoing, '参考', 'out') || '<div class="empty">无</div>') +
       '<div class="sub-hd" style="margin-top:14px">入链 · 引用该文的文献（' + c.incoming.length + ' / 共 ' + c.incomingTotal + '）</div>' + (rows(c.incoming, '施引', 'in') || '<div class="empty">无</div>') +
       (c.seed.isRetracted ? '<div class="howto">注意：该文献在 OpenAlex 标记为已撤稿。</div>' : '');
     PD.toast('引文链条已展开');
@@ -769,6 +783,37 @@ async function showChain(id) {
 }
 $('btnAddChainOut').onclick = () => { if (chainOut.length) { PD.addItems(chainOut); renderAll(); } };
 $('btnAddChainIn').onclick = () => { if (chainIn.length) { PD.addItems(chainIn); renderAll(); } };
+
+/* ---------- 引文图谱（零依赖 SVG：中心=本文，左=参考文献，右=施引文献） ---------- */
+function chainGraphSVG(seed, out, inc) {
+  const W = 920;
+  const top = Math.min(out.length, 8), tin = Math.min(inc.length, 8);
+  const rows = Math.max(top, tin, 1);
+  const H = 96 + rows * 46;
+  const cx = W / 2, cy = H / 2;
+  const trunc = (s, n) => ((s || '').length > n ? (s || '').slice(0, n - 1) + '…' : (s || ''));
+  const radius = c => 5 + Math.min(9, Math.round(Math.sqrt(Math.max(0, PD.num(c))) / 6));
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="引文图谱">';
+  svg += '<line x1="' + (cx - 240) + '" y1="' + cy + '" x2="' + (cx + 240) + '" y2="' + cy + '" class="g-axis"/>';
+  out.slice(0, 8).forEach((x, i) => {
+    const y = 48 + (rows === 1 ? (H - 96) / 2 : i * ((H - 96) / Math.max(1, rows - 1)));
+    svg += '<path d="M ' + (cx - 16) + ' ' + cy + ' C ' + (cx - 140) + ' ' + cy + ', 300 ' + y + ', ' + (214 + radius(x.citedBy)) + ' ' + y + '" class="g-edge g-edge-out"/>';
+    svg += '<a href="' + esc(PD.wosURL(x)) + '" target="_blank" rel="noopener">' +
+      '<circle cx="210" cy="' + y + '" r="' + radius(x.citedBy) + '" class="g-node-out"><title>' + esc(trunc(x.title, 80)) + ' · 被引 ' + x.citedBy + '</title></circle>' +
+      '<text x="194" y="' + (y + 3.5) + '" class="g-lb" text-anchor="end">' + esc(trunc(x.title, 30)) + '</text></a>';
+  });
+  inc.slice(0, 8).forEach((x, i) => {
+    const y = 48 + (rows === 1 ? (H - 96) / 2 : i * ((H - 96) / Math.max(1, rows - 1)));
+    svg += '<path d="M ' + (cx + 16) + ' ' + cy + ' C ' + (cx + 140) + ' ' + cy + ', 620 ' + y + ', ' + (706 - radius(x.citedBy)) + ' ' + y + '" class="g-edge g-edge-in"/>';
+    svg += '<a href="' + esc(PD.wosURL(x)) + '" target="_blank" rel="noopener">' +
+      '<circle cx="710" cy="' + y + '" r="' + radius(x.citedBy) + '" class="g-node-in"><title>' + esc(trunc(x.title, 80)) + ' · 被引 ' + x.citedBy + '</title></circle>' +
+      '<text x="726" y="' + (y + 3.5) + '" class="g-lb">' + esc(trunc(x.title, 30)) + '</text></a>';
+  });
+  svg += '<circle cx="' + cx + '" cy="' + cy + '" r="15" class="g-center"><title>' + esc(trunc(seed.title, 80)) + '</title></circle>';
+  svg += '<text x="' + cx + '" y="' + (cy + 24) + '" class="g-center-lb">' + esc(trunc(seed.title, 36)) + '</text>';
+  svg += '</svg>';
+  return svg;
+}
 
 /* 动态元素统一委托 */
 document.addEventListener('click', e => {
@@ -885,9 +930,134 @@ $('btnFeedback').onclick = () => {
   PD.toast('反馈草稿已导出');
 };
 
+/* ---------- 主题（暗色/浅色，独立站持久化；嵌入态跟随宿主页面观感） ---------- */
+const MOON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/></svg>';
+const SUN_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+function appRoot() { return document.querySelector('.app'); }
+function themeLabel() {
+  const a = appRoot(), b = $('btnTheme');
+  if (!a || !b) return;
+  const dark = a.classList.contains('dark');
+  b.innerHTML = dark ? SUN_SVG : MOON_SVG;
+  b.title = dark ? '切换到浅色模式' : '切换到深色模式';
+  b.setAttribute('aria-label', b.title);
+  b.setAttribute('aria-pressed', String(dark));
+}
+(function bootTheme() {
+  const a = appRoot(); if (!a) return;
+  let pref = null;
+  try { pref = localStorage.getItem('herpaper.theme'); } catch (e) { }
+  const dark = pref ? pref === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+  a.classList.toggle('dark', dark);
+  $('btnTheme').onclick = () => {
+    const to = !a.classList.contains('dark');
+    a.classList.toggle('dark', to);
+    try { localStorage.setItem('herpaper.theme', to ? 'dark' : 'light'); } catch (e) { }
+    themeLabel();
+  };
+  themeLabel();
+})();
+
+/* ---------- 命令面板（Ctrl/Cmd+K）：视图跳转 / 库内检索 / 常用动作 ---------- */
+let paletteEl = null, paletteIdx = 0, paletteItems = [];
+function paletteOpen() { return !!(paletteEl && !paletteEl.classList.contains('hidden')); }
+function openPalette() {
+  if (!paletteEl) {
+    paletteEl = document.createElement('div');
+    paletteEl.className = 'palette hidden';
+    paletteEl.innerHTML = '<div class="palette-box" role="dialog" aria-label="命令面板">' +
+      '<input class="palette-input" id="paletteInput" placeholder="输入命令或检索文献…" autocomplete="off" spellcheck="false" aria-label="命令面板输入">' +
+      '<div class="palette-list" id="paletteList" role="listbox"></div>' +
+      '<div class="palette-foot"><span>↑↓ 选择</span><span>Enter 执行</span><span>Esc 关闭</span></div></div>';
+    appRoot().appendChild(paletteEl);
+    paletteEl.addEventListener('click', e => { if (e.target === paletteEl) closePalette(); });
+    $('paletteList').addEventListener('click', e => {
+      const d = e.target.closest('[data-pi]');
+      if (d) execPalette(Number(d.dataset.pi));
+    });
+    $('paletteInput').addEventListener('input', () => { paletteIdx = 0; renderPaletteList(); });
+    $('paletteInput').addEventListener('keydown', e => {
+      if (e.key === 'ArrowDown') { e.preventDefault(); paletteIdx = Math.min(paletteIdx + 1, paletteItems.length - 1); renderPaletteList(); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); paletteIdx = Math.max(paletteIdx - 1, 0); renderPaletteList(); }
+      else if (e.key === 'Enter') { e.preventDefault(); execPalette(paletteIdx); }
+      else if (e.key === 'Escape') { e.preventDefault(); closePalette(); }
+    });
+  }
+  paletteEl.classList.remove('hidden');
+  paletteIdx = 0;
+  const inp = $('paletteInput');
+  inp.value = '';
+  renderPaletteList();
+  inp.focus();
+}
+function closePalette() { if (paletteEl) paletteEl.classList.add('hidden'); }
+function execPalette(i) {
+  const it = paletteItems[i];
+  closePalette();
+  if (it) it.run();
+}
+function paletteEntries(q) {
+  const out = [];
+  const ql = (q || '').toLowerCase();
+  const add = (t, h, run, k) => { if (!ql || (t || '').toLowerCase().includes(ql)) out.push({ t, h, run, k }); };
+  Object.keys(NAV).forEach(v => add(NAV[v][1], '视图 ' + NAV[v][0], () => go(v), '跳转'));
+  lib().forEach(it => add((it.title || '').slice(0, 90), '被引 ' + (it.citedBy || 0), () => editItem(it.id), '文献'));
+  add('切换深浅主题', '外观', () => { const b = $('btnTheme'); if (b) b.click(); }, '动作');
+  add('导出完整备份 (.json)', '同步', () => doExport('json'), '动作');
+  add('导出 RIS', '导出', () => doExport('ris'), '动作');
+  add('导出 BibTeX', '导出', () => doExport('bib'), '动作');
+  add('导出 CSV', '导出', () => doExport('csv'), '动作');
+  add('刷新被引数据', '引文报告', () => { go('v4'); refreshCites(); }, '动作');
+  add('复制参考文献表', '边写边引', () => { go('v7'); const b = $('btnCopyBib'); if (b) b.click(); }, '动作');
+  add('生成共享快照', '共享', () => go('v6'), '动作');
+  return out.slice(0, 40);
+}
+function renderPaletteList() {
+  const list = $('paletteList');
+  if (!list) return;
+  paletteItems = paletteEntries(paletteEl ? $('paletteInput').value : '');
+  if (paletteIdx >= paletteItems.length) paletteIdx = Math.max(0, paletteItems.length - 1);
+  list.innerHTML = paletteItems.length ? paletteItems.map((it, i) =>
+    '<div class="palette-item' + (i === paletteIdx ? ' on' : '') + '" data-pi="' + i + '" role="option" aria-selected="' + (i === paletteIdx) + '">' +
+    '<span class="pi-k">' + esc(it.k) + '</span><span class="pi-t">' + esc(it.t) + '</span><span class="pi-h">' + esc(it.h) + '</span></div>').join('')
+    : '<div class="palette-empty">没有匹配项</div>';
+  const on = list.querySelector('.palette-item.on');
+  if (on) on.scrollIntoView({ block: 'nearest' });
+}
+
+/* ---------- 全局快捷键 ---------- */
+function isTyping(el) {
+  return !!(el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable));
+}
+let gSeq = false, gTimer = null;
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === 'k' || e.key === 'K')) { e.preventDefault(); openPalette(); return; }
+  if (paletteOpen()) return;
+  if (isTyping(e.target)) return;
+  if (e.key === '/') { e.preventDefault(); go('v1'); const q = $('q'); q.focus(); q.select(); }
+  else if (e.key === '?') { e.preventDefault(); showShortcuts(); }
+  else if (e.key === 'g' && !e.ctrlKey && !e.metaKey) { gSeq = true; clearTimeout(gTimer); gTimer = setTimeout(() => { gSeq = false; }, 1000); }
+  else if (gSeq && e.key >= '1' && e.key <= '9') { e.preventDefault(); gSeq = false; go('v' + e.key); }
+  else if (e.key === 'Escape') { closeModal(); }
+});
+function showShortcuts() {
+  const row = (k, d) => '<div style="display:flex;justify-content:space-between;gap:14px;padding:7px 2px;border-bottom:1px dashed var(--line);font-size:12.5px"><span>' + d + '</span><code>' + k + '</code></div>';
+  modal('键盘快捷键',
+    row('Ctrl / ⌘ + K', '命令面板') + row('/', '打开检索框') + row('g 然后 1…9', '切换视图') +
+    row('?', '快捷键帮助') + row('Esc', '关闭弹窗') +
+    '<p class="muted" style="margin-top:12px">命令面板内：↑↓ 选择 · Enter 执行 · Esc 关闭。</p>');
+}
+
+/* ---------- 视图深链（?view=v1..v9，嵌入态不改平台 URL） ---------- */
+function initialView() {
+  if (EMBEDDED) return 'v1';
+  try { const v = new URLSearchParams(location.search).get('view'); if (/^v[1-9]$/.test(v)) return v; } catch (e) { }
+  return 'v1';
+}
+
 renderChips(); initJournals(); genTemplate('');
 ensureUsageStreak();
-renderAll(); go('v1');
+renderAll(); go(initialView());
 refreshZoteroStatus();
 
 // 可分享的预填检索链接：https://<站点>/?q=CRISPR&source=arxiv

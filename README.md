@@ -84,6 +84,7 @@ node --test tests/core-parsers.test.js
 - [x] 九视图工作台（检索 / 同步 / 全记录 / 引文报告 / 管理 / 共享 / 边写边引 / 模板 / 匹配）
 - [x] Zotero 互通：RIS / BibTeX / CSL-JSON + Local API 增量同步
 - [x] EN 界面 i18n（含独立模式中英切换）
+- [x] 暗色模式、命令面板（Ctrl/Cmd+K）、快捷键、引文图谱
 - [ ] PDF 附件与全文管理
 - [ ] 引文图谱可视化增强（时间线视图）
 
